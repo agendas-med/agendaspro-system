@@ -1,7 +1,6 @@
 <template>
     <section>
-        <TableMain v-if="false" />
-        <UtilsDataTable :dataTable="pacientes" :rowsPerPage="5" table="cliente">
+        <UtilsDataTable :dataTable="pacientes" :rowsPerPage="7" table="cliente">
             <template #column-nome="{ item }">
                 <div class="flex items-center">
                     <img :src="item.url_foto" class="avatar avatar-pp" alt="">
