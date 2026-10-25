@@ -11,14 +11,14 @@
                 </div>
             </template>
             <template #column-agendamento="{ item }">
-                <p>{{ item.services[0].name }}</p>
+                <p>{{ item.services[0]?.name || 'Sem serviço' }}</p>
             </template>
             <template #column-hora="{ item }">
                 <p class="items-center">{{ $myFunctions.formatHour(item.date) }}</p>
             </template>
             <template #column-status="{ item }">
                 <p>
-                    <UtilsBadge class="text-center" :background="item.status == 'agendado' ? 'var(--amarelo)' : item.status == 'iniciado' ? 'var(--azul)' : item.status == 'realizado' ? 'var(--verde-escuro)' : 'var(--vermelho)'" :text="item.status" />
+                    <UtilsBadge class="text-center" :background="item.status == 'pendente_pagamento' ? '#f97316' : item.status == 'agendado' ? 'var(--amarelo)' : item.status == 'iniciado' ? 'var(--azul)' : item.status == 'realizado' ? 'var(--verde-escuro)' : 'var(--vermelho)'" :text="item.status === 'pendente_pagamento' ? 'Aguardando pagamento' : item.status" />
                 </p>
             </template>
             <template #column-ações="{ item }">
@@ -29,7 +29,7 @@
                     <button class="rounded-button" v-on:click="handleStopAppointment(item)" v-if="item.status == 'iniciado'" title="Terminar agendamento">
                         <font-awesome icon="circle-stop" class="verde" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleCancelAppointment(item)" v-if="item.status == 'agendado'" title="Cancelar agendamento">
+                    <button class="rounded-button" v-on:click="handleCancelAppointment(item)" v-if="['agendado', 'pendente_pagamento'].includes(item.status)" title="Cancelar agendamento">
                         <font-awesome icon="circle-xmark" class="vermelho" />
                     </button>
                 </div>

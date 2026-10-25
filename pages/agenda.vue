@@ -300,10 +300,10 @@ export default {
 }
 
 .legendas {
-  position: absolute;
-  right: var(--space-7);
-  top: 10.5rem;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
   align-items: center;
   gap: var(--space-5);
 
@@ -383,7 +383,8 @@ export default {
 
 @media (max-width: 768px) {
   .legendas {
-    display: none;
+    justify-content: flex-start;
+    gap: var(--space-3);
   }
 }
 </style>

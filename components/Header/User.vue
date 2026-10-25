@@ -1,7 +1,7 @@
 <template>
     <div class="header-user">
         <div class="user-container flex items-center" v-on:click="toggleDropdown()">
-            <img src="https://cademint-test.s3.amazonaws.com/2024-09-04T02_10_20.206Z126018478_1648490771979717_7245151950313189709_o.jpg" alt="Imagem usuário" class="avatar avatar-pp">
+            <img :src="$global.user.url_photo || defaultUserImage" alt="Imagem usuário" class="avatar avatar-pp">
             <div class="informacoes-usuario">
                 <p class="fontsize-md preto">{{ $global.user.name }}</p>
             </div>
@@ -24,9 +24,11 @@
     </div>
 </template>
 <script>
+import defaultUserImage from '@/assets/img/default-user-image.png';
 export default {
     data() {
         return {
+            defaultUserImage,
             dropdownOpened: false
         }
     },

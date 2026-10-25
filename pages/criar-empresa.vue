@@ -2,8 +2,7 @@
   <div class="create-company">
     <div class="text-left">
       <h1 class="fontsize-xl-bold preto">Criar empresa</h1>
-      <p class="fontsize-md cinza">Crie sua empresa no AgendasPro e ative automaticamente sua conta de recebimentos
-        Asaas.</p>
+      <p class="fontsize-md cinza">Cadastre sua empresa para gerenciar agendamentos e vendas.</p>
     </div>
     <form @submit.prevent="createCompany">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -90,7 +89,7 @@
       </div>
 
       <button type="submit" class="btn btn-primary mt-4 w-full" :disabled="loading"
-        :class="{ 'btn-loading': loading }">Criar Empresa e Conta Asaas</button>
+        :class="{ 'btn-loading': loading }">Criar empresa</button>
     </form>
   </div>
 </template>
@@ -167,7 +166,7 @@ export default {
         .then(function (response) {
           self.loading = false;
 
-          self.$myFunctions.showFeedbackModal(self, "Sucesso!", "Empresa e Conta criadas com sucesso!", "success");
+          self.$myFunctions.showFeedbackModal(self, "Sucesso!", "Empresa criada com sucesso!", "success");
 
           setTimeout(() => {
             window.location.href = "/trocar-empresa";

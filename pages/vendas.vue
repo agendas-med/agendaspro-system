@@ -87,8 +87,8 @@ export default {
       this.$myFunctions.openModal({
         instance: this,
         title: "Alterar venda",
-        saveButton: "Salvar",
-        saveButton2: "Finalizar",
+        saveButton: item.status === 'realizada' ? '' : "Salvar",
+        saveButton2: item.status === 'realizada' ? '' : "Finalizar",
         cancelButton: "Cancelar",
         contentObject: item
       });
