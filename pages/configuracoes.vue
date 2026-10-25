@@ -24,6 +24,12 @@ export default {
                     default: false
                 },
                 {
+                    name: "Recebimentos",
+                    quantity: null,
+                    route: "recebimentos",
+                    default: false
+                },
+                {
                     name: "Cargos",
                     quantity: null,
                     route: "cargos",

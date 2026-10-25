@@ -33,10 +33,10 @@
     </template>
     <template #column-ações="{ item }">
       <div class="flex space-x-2">
-        <button class="rounded-button" v-on:click="handleDeleteSale(item)">
+        <button class="rounded-button" :aria-label="'Excluir venda ' + item.id" v-on:click="handleDeleteSale(item)">
           <font-awesome icon="trash" class="vermelho" />
         </button>
-        <button class="rounded-button" v-on:click="handleEditSale(item)">
+        <button class="rounded-button" :aria-label="'Abrir venda ' + item.id" v-on:click="handleEditSale(item)">
           <font-awesome icon="pen" class="cinza" />
         </button>
       </div>

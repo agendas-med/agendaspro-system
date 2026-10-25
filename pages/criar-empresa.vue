@@ -20,7 +20,7 @@
         </div>
 
         <div class="form-group">
-          <label for="email">E-mail Comercial (Login Asaas)</label>
+          <label for="email">E-mail comercial</label>
           <input type="email" id="email" v-model="email" required placeholder="contato@empresa.com">
         </div>
         <div class="form-group">
@@ -166,11 +166,8 @@ export default {
         .then(function (response) {
           self.loading = false;
 
-          self.$myFunctions.showFeedbackModal(self, "Sucesso!", "Empresa criada com sucesso!", "success");
-
-          setTimeout(() => {
-            window.location.href = "/trocar-empresa";
-          }, 2000);
+          localStorage.setItem('selected_company', String(response.data.returnObj.id));
+          window.location.href = '/configuracoes/recebimentos?welcome=1';
         }).catch((error) => {
           self.loading = false;
 

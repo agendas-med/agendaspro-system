@@ -45,16 +45,16 @@ export default {
         }
     },
     mounted: function () {
-        for (let i = 0; i < this.tabs.length; i++) {
-            let currentTab = this.tabs[i];
-
-            if (currentTab.default) {
-                this.tabActive = i;
-            }
-        }
-
-        this.selectTab(this.tabActive);
+        const current = this.tabs.findIndex(tab => this.$route.path.endsWith('/' + tab.route));
+        this.tabActive = current >= 0 ? current : Math.max(0, this.tabs.findIndex(tab => tab.default));
+        if (current < 0) this.selectTab(this.tabActive);
         this.updateIndicator();
+    },
+    watch: {
+        '$route.path'() {
+            const current = this.tabs.findIndex(tab => this.$route.path.endsWith('/' + tab.route));
+            if (current >= 0) { this.tabActive = current; this.updateIndicator(); }
+        }
     }
 }
 </script>

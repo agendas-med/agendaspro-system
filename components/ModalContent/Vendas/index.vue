@@ -1,492 +1,451 @@
 <template>
-    <form id="informations-form" @submit.prevent="saveSale" :invalid="invalidForm">
-        <div class="edit-event grid grid-cols-1 gap-4">
-            <div class="input-group">
-                <label>Cliente</label>
-                <UtilsAjaxAutocomplete @select="setUser($event)" ajaxtype="clientes" :entityid="sale.customer_id"
-                    :entityname="sale.customer_name" :required="true" />
-            </div>
-            <div class="input-group">
-                <label>Serviços <font-awesome icon="circle-info" class="cinza"
-                        title="Os serviços são incluídos/alterados no agendamento vinculado à venda." /></label>
-                <div class="flex gap-6">
-                    <router-link :to="'/agenda?appointment=' + sale.appointment_id"
-                        v-if="sale?.appointment_id">Agendamento Nº {{ sale.appointment_id }}</router-link>
-                    <div class="flex gap-6 flex-wrap items-center">
-                        <UtilsBadge v-for="(servico, index) in sale.services" :key="index" :text="servico.name" />
-                        <p v-if="sale.services.length == 0" class="mt-2 cinza">Nenhum agendamento vinculado à esta venda
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="input-group">
-                <div class="dual-input half confirm-button">
-                    <div class="input-group">
-                        <label for="product">Adicione um produto</label>
-                        <select v-model="idProductToAdd">
-                            <option value="">* Selecione *</option>
-                            <option :value="product.id" v-for="(product, index) in $global.company.products">{{
-                                product.name }} ({{ product.available_quantity > 0 ? "Disponível" : "Indisponível" }})
-                            </option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="quantity">Quantidade</label>
-                        <input type="number" v-model="quantityProductToAdd">
-                    </div>
-                    <button type="button" class="btn btn-primary" v-on:click="addProduct()">Adicionar</button>
-                </div>
-                <UtilsDataTable :loaded="true" :dataTable="sale.products" :rowsPerPage="2" table="produto" @handleNew=""
-                    :newButton="false">
-                    <template #column-id="{ item }">
-                        <p>{{ item.id }}</p>
-                    </template>
-                    <template #column-nome="{ item }">
-                        <p>{{ item.name }}</p>
-                    </template>
-                    <template #column-quantidade="{ item }">
-                        <p>{{ item.quantity }}</p>
-                    </template>
-                    <template #column-ações="{ item }">
-                        <div class="flex space-x-2">
-                            <button type="button" class="rounded-button" v-on:click="handleDeleteProduct(item)">
-                                <font-awesome icon="trash" class="vermelho" />
-                            </button>
-                        </div>
-                    </template>
-                </UtilsDataTable>
-            </div>
-            <div class="input-group">
-                <label for="status">Status</label>
-                <select name="status" v-model="sale.status">
-                    <option value="em_aberto">Em aberto</option>
-                    <option value="realizada">Realizada</option>
-                    <option value="cancelada">Cancelada</option>
-                </select>
-            </div>
-            <div class="sale-summary" v-if="sale.id">
-                <p class="fontsize-md-bold">Resumo da venda</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="text-left">Item</th>
-                            <th class="text-right">Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="sale-item" v-for="(item, index) in sale.debts_list">
-                            <td class="text-left">{{ index + 1 }} - {{ item.name }}</td>
-                            <td class="text-right">{{ $myFunctions.formatCurrency(item.value) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class="sale-subtotal">
-                    <tbody>
-                        <tr>
-                            <td class="text-left"><span class="fontsize-md-bold">Sub total</span></td>
-                            <td class="text-right fontsize-md">{{ $myFunctions.formatCurrency(sale.total) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <table class="sale-subtotal mt-2" style="border-top: 1px solid #eee; padding-top: 10px;">
-                    <tbody>
-                        <tr>
-                            <td class="text-left"><span class="fontsize-sm-bold"
-                                    style="color: var(--primary-color);">Total
-                                    Pago</span></td>
-                            <td class="text-right fontsize-sm-bold" style="color: var(--primary-color);">{{
-                                $myFunctions.formatCurrency(totalPaid) }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-left"><span class="fontsize-sm-bold">Restante a Pagar</span></td>
-                            <td class="text-right fontsize-sm-bold"
-                                :style="{ color: remainingAmount > 0 ? '#ef4444' : '#10b981' }">
-                                {{ remainingAmount > 0 ? $myFunctions.formatCurrency(remainingAmount) : 'PAGO' }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <UtilsDataTable :loaded="true" :dataTable="sale.payments" :rowsPerPage="2" table="pagamento"
-                    @handleNew="" :newButton="false">
-                    <template #column-id="{ item }">
-                        <p>{{ item.id }}</p>
-                    </template>
-                    <template #column-método-pagamento="{ item }">
-                        <p>{{ retornaMetodo(item.payment_type) }}</p>
-                    </template>
-                    <template #column-valor="{ item }">
-                        <p>{{ $myFunctions.formatCurrency(item.amount) }}</p>
-                    </template>
-                    <template #column-ações="{ item }">
-                        <div class="flex space-x-2">
-                            <span class="text-sm">Confirmado</span>
-                        </div>
-                    </template>
-                </UtilsDataTable>
-                <button class="btn btn-blue" id="insert-payment-button" type="button" @click="openPaymentModal" :disabled="sale.status !== 'em_aberto' || remainingAmount <= 0">Inserir
-                    pagamento</button>
-            </div>
+  <form
+    id="informations-form"
+    @submit.prevent="saveSale"
+    :invalid="invalidForm"
+  >
+    <div class="edit-event grid grid-cols-1 gap-4">
+      <div class="input-group">
+        <label>Cliente</label
+        ><UtilsAjaxAutocomplete
+          @select="setUser"
+          ajaxtype="clientes"
+          :entityid="sale.customer_id"
+          :entityname="sale.customer_name"
+          :required="true"
+        />
+      </div>
+      <div class="input-group">
+        <label
+          >Serviços
+          <font-awesome
+            icon="circle-info"
+            class="cinza"
+            title="Os serviços são incluídos no agendamento vinculado."
+        /></label>
+        <div class="flex gap-6 flex-wrap items-center">
+          <router-link
+            v-if="sale.appointment_id"
+            :to="'/agenda?appointment=' + sale.appointment_id"
+            >Agendamento Nº {{ sale.appointment_id }}</router-link
+          ><UtilsBadge
+            v-for="service in sale.services"
+            :key="service.id"
+            :text="service.name"
+          />
+          <p v-if="!sale.services?.length" class="mt-2 cinza">
+            Nenhum agendamento vinculado a esta venda
+          </p>
         </div>
-        <input type="submit" id="submit-button" />
-        <input type="submit" id="submit-button2" />
-    </form>
-    <div class="payment-modal-wrapper" v-if="showPaymentModal" v-on:click="showPaymentModal = !showPaymentModal"></div>
-    <div class="small-modal" :class="{ 'show': showPaymentModal }" data-title="Adicionar pagamento">
-
-        <form @submit.prevent="insertPayment" v-if="!pixData">
-            <div class="form-group">
-                <label for="payment_type">Forma de pagamento</label>
-                <select id="payment_type" required v-model="paymentType">
-                    <option value="">* Selecione *</option>
-                    <option value="pix_asaas" :disabled="$global.company.asaas_status !== 'APPROVED'">Pix Automático (Gerar QR Code Asaas)</option>
-                    <option value="pix">Pix (Conferência Manual)</option>
-                    <option value="cartao_debito" v-if="false">Cartão de Débito</option>
-                    <option value="cartao_credito" v-if="false">Cartão de Crédito</option>
-                    <option value="dinheiro">Dinheiro</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="amount">Valor</label>
-                <input type="text" id="amount" value="R$ 0,00" required @input="$myFunctions.inputMoneyCheck($event)">
-            </div>
-            <button class="btn btn-primary" type="submit" :disabled="paymentLoading">{{ paymentLoading ? 'Processando...' : 'Adicionar' }}</button>
-        </form>
-
-        <div v-else-if="pixData && pixData.payload" class="flex flex-col items-center justify-center p-2 text-center">
-            <p class="fontsize-sm cinza mb-4">Escaneie o QR Code abaixo no app do seu banco.</p>
-
-            <img v-if="pixData.encodedImage" :src="`data:image/png;base64,${pixData.encodedImage}`"
-                class="w-48 h-48 border p-2 mb-4 bg-white" style="border-radius: 8px;" alt="QR Code PIX" />
-
-            <div class="w-full relative mb-4 text-left">
-                <label class="text-xs cinza font-bold">Pix Copia e Cola:</label>
-                <input type="text" readonly :value="pixData.payload" class="w-full text-sm bg-gray-100 p-2 border mt-1"
-                    style="border-radius: 4px; padding-right: 40px;" />
-                <button type="button" @click="copyPix" class="absolute right-2 bottom-2" title="Copiar PIX"
-                    style="color: var(--primary-color)">
-                    <font-awesome icon="copy" />
-                </button>
-            </div>
-
-            <div class="flex items-center justify-center mb-4 text-sm" style="color: var(--primary-color)">
-                <font-awesome icon="circle-notch" spin class="mr-2" />
-                Aguardando pagamento...
-            </div>
-
-            <button type="button" @click="cancelarPix" class="btn btn-red w-full text-sm">
-                Cancelar este PIX
-            </button>
+      </div>
+      <div class="input-group">
+        <div class="dual-input half confirm-button" v-if="!locked">
+          <div class="input-group">
+            <label for="sale-product">Adicione um produto</label
+            ><select id="sale-product" v-model="idProductToAdd">
+              <option value="">* Selecione *</option>
+              <option
+                v-for="product in $global.company.products"
+                :key="product.id"
+                :value="product.id"
+              >
+                {{ product.name }} ({{
+                  product.available_quantity > 0
+                    ? "Disponível"
+                    : "Indisponível"
+                }})
+              </option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="sale-product-quantity">Quantidade</label
+            ><input
+              id="sale-product-quantity"
+              type="number"
+              min="1"
+              step="1"
+              v-model="quantityProductToAdd"
+            />
+          </div>
+          <button type="button" class="btn btn-primary" @click="addProduct">
+            Adicionar
+          </button>
         </div>
-
+        <UtilsDataTable
+          :loaded="true"
+          :dataTable="sale.products"
+          :rowsPerPage="3"
+          table="produto"
+          :newButton="false"
+          ><template #column-id="{ item }"
+            ><p>{{ item.id }}</p></template
+          ><template #column-nome="{ item }"
+            ><p>{{ item.name }}</p></template
+          ><template #column-quantidade="{ item }"
+            ><p>{{ item.quantity }}</p></template
+          ><template #column-ações="{ item }"
+            ><button
+              v-if="!locked"
+              type="button"
+              class="rounded-button"
+              :aria-label="'Remover ' + item.name"
+              @click="handleDeleteProduct(item)"
+            >
+              <font-awesome icon="trash" class="vermelho" /></button></template
+        ></UtilsDataTable>
+      </div>
+      <div class="input-group">
+        <label for="sale-status">Status</label
+        ><select id="sale-status" v-model="sale.status" :disabled="locked">
+          <option value="em_aberto">Em aberto</option>
+          <option value="realizada">Realizada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="sale-summary" v-if="sale.id">
+        <p class="fontsize-md-bold">Resumo da venda</p>
+        <table>
+          <thead>
+            <tr>
+              <th class="text-left">Item</th>
+              <th class="text-right">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in previewItems" :key="index">
+              <td>{{ item.name }}</td>
+              <td class="text-right">
+                {{ $myFunctions.formatCurrency(item.value) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="sale-subtotal">
+          <tbody>
+            <tr>
+              <td><strong>Total</strong></td>
+              <td class="text-right">
+                {{ $myFunctions.formatCurrency(previewTotal) }}
+              </td>
+            </tr>
+            <tr>
+              <td>Total pago</td>
+              <td class="text-right paid-amount">
+                {{ $myFunctions.formatCurrency(totalPaid) }}
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Restante a pagar</strong></td>
+              <td
+                class="text-right"
+                :class="remainingAmount > 0 ? 'due-amount' : 'paid-amount'"
+              >
+                <strong>{{
+                  remainingAmount > 0
+                    ? $myFunctions.formatCurrency(remainingAmount)
+                    : "PAGO"
+                }}</strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <UtilsDataTable
+          :loaded="true"
+          :dataTable="sale.payments"
+          :rowsPerPage="3"
+          table="pagamento"
+          :newButton="false"
+          ><template #column-id="{ item }"
+            ><p>{{ item.id }}</p></template
+          ><template #column-método-pagamento="{ item }"
+            ><p>{{ retornaMetodo(item.payment_type) }}</p></template
+          ><template #column-valor="{ item }"
+            ><p>{{ $myFunctions.formatCurrency(item.amount) }}</p></template
+          ><template #column-ações
+            ><span class="paid-amount">Confirmado</span></template
+          ></UtilsDataTable
+        >
+        <button
+          class="btn btn-blue"
+          id="insert-payment-button"
+          type="button"
+          @click="openPaymentModal"
+          :disabled="
+            preparingPayment ||
+            sale.status !== 'em_aberto' ||
+            remainingAmount <= 0
+          "
+        >
+          {{
+            preparingPayment
+              ? "Preparando…"
+              : sale.mp_charge_id || sale.pix_asaas_id
+                ? "Acompanhar Pix"
+                : "Receber pagamento"
+          }}
+        </button>
+      </div>
     </div>
+    <input type="submit" id="submit-button" /><input
+      type="submit"
+      id="submit-button2"
+    />
+  </form>
+  <PaymentsSalePayment
+    v-if="showPaymentModal"
+    :sale="sale"
+    @updated-sale="updateSale"
+    @close="showPaymentModal = false"
+  />
 </template>
+
 <script>
+import { reactive } from "vue";
 export default {
-    emits: ["savedContent"],
-    data() {
-        return {
-            invalidForm: true,
-            idProductToAdd: "",
-            quantityProductToAdd: 0,
-            paymentType: "",
-            showPaymentModal: false,
-            pixData: null,
-            paymentLoading: false,
-            pollingInterval: null
-        }
+  emits: ["savedContent"],
+  data() {
+    return {
+      invalidForm: true,
+      idProductToAdd: "",
+      quantityProductToAdd: 1,
+      showPaymentModal: false,
+      preparingPayment: false,
+      originalSignature: "",
+      newSale: {
+        id: null,
+        products: [],
+        services: [],
+        customer_id: null,
+        customer_name: "",
+        company_id: this.$global.company.id,
+        appointment_id: null,
+        status: "em_aberto",
+      },
+    };
+  },
+  computed: {
+    sale() {
+      return reactive(
+        this.$global.contentObject.id
+          ? this.$global.contentObject
+          : this.newSale,
+      );
     },
-    computed: {
-        sale: function () {
-            let sale;
-
-            if (this.$global.contentObject.id != 0) {
-                sale = this.$global.contentObject;
-            } else {
-                sale = {
-                    id: null,
-                    products: [],
-                    services: [],
-                    customer_id: null,
-                    customer_name: "",
-                    company_id: this.$global.company.id,
-                    appointment_id: null,
-                    status: "em_aberto"
-                }
-            }
-
-            return reactive(sale);
-        },
-        totalPaid: function () {
-            if (!this.sale || !this.sale.payments) return 0;
-            return this.sale.payments.reduce((acc, currentPayment) => {
-                return acc + parseFloat(currentPayment.amount || 0);
-            }, 0);
-        },
-        remainingAmount: function () {
-            if (!this.sale) return 0;
-            let total = parseFloat(this.sale.total || 0);
-            let remaining = total - this.totalPaid;
-
-            return remaining > 0 ? remaining : 0;
-        }
+    previewItems() {
+      return [...(this.sale.products || []), ...(this.sale.services || [])].map(
+        (item) => ({
+          name:
+            Number(item.quantity || 1) > 1
+              ? `${item.name} (x${item.quantity})`
+              : item.name,
+          value: Number(item.value) * Number(item.quantity || 1),
+        }),
+      );
     },
-    unmounted() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-        }
+    previewTotal() {
+      return (
+        Math.round(
+          this.previewItems.reduce((sum, item) => sum + item.value, 0) * 100,
+        ) / 100
+      );
     },
-    methods: {
-        openPaymentModal() {
-            if (this.sale.pix_payload) {
-                let expDate = new Date(this.sale.pix_expiration_date);
-                if (expDate > new Date()) {
-                    this.pixData = {
-                        payload: this.sale.pix_payload,
-                        encodedImage: this.sale.pix_encoded_image,
-                        paymentId: this.sale.pix_asaas_id
-                    };
-                    this.iniciarPollingDePagamento();
-                } else {
-                    this.pixData = { payload: this.sale.pix_payload, encodedImage: this.sale.pix_encoded_image, paymentId: this.sale.pix_asaas_id };
-                    this.$myFunctions.showFeedbackModal(this, "Aviso", "Este Pix expirou. Cancele esta cobrança antes de gerar outra.", "warning");
-                }
-            } else {
-                this.pixData = null;
-            }
-            this.showPaymentModal = true;
-        },
-        retornaMetodo: function (metodo) {
-            switch (metodo) {
-                case "pix_asaas":
-                    return "Pix Asaas";
-                case "pix":
-                    return "Pix Manual";
-                case "cartao_debito":
-                    return "Cartão de Débito";
-                case "cartao_credito":
-                    return "Cartão de Crédito";
-                case "dinheiro":
-                    return "Dinheiro";
-            }
-        },
-        addProduct: function () {
-            if (this.idProductToAdd != "" && this.quantityProductToAdd != 0) {
-                let indexTargetProduct = this.$global.company.products.findIndex(product => product.id == this.idProductToAdd);
-                let targetProduct = { ...this.$global.company.products[indexTargetProduct] };
-
-                if (targetProduct.available_quantity <= 0) {
-                    this.$myFunctions.showFeedbackModal(this, "Atenção", "Produto indisponível no estoque!", "warning");
-                    return;
-                }
-
-                const existing = this.sale.products.find(product => product.id === targetProduct.id);
-                const quantity = Number(this.quantityProductToAdd) + Number(existing?.quantity || 0);
-                if (!Number.isInteger(quantity) || quantity < 1 || quantity > targetProduct.available_quantity) {
-                    this.$myFunctions.showFeedbackModal(this, 'Atenção', 'Quantidade inválida ou superior ao estoque disponível.', 'warning');
-                    return;
-                }
-                if (existing) existing.quantity = quantity;
-                else this.sale.products.push({ ...targetProduct, quantity });
-                this.idProductToAdd = "";
-                this.quantityProductToAdd = 0;
-            }
-        },
-        handleDeleteProduct: function (product) {
-            let productIndex = this.sale.products.findIndex(item => item.id == product.id);
-            this.sale.products.splice(productIndex, 1);
-        },
-        setUser: function (event) {
-            this.sale.customer_id = event.id;
-            this.sale.customer_name = event.name;
-        },
-        insertPayment: function () {
-            let self = this;
-            if (this.paymentLoading) return;
-            let amountValue = Number(this.$myFunctions.returnFloatNumber($("#amount").val()));
-            if (!Number.isFinite(amountValue) || amountValue <= 0 || amountValue > this.remainingAmount) {
-                self.$myFunctions.showFeedbackModal(self, "Atenção", "Informe um valor maior que zero e até o saldo em aberto.", "warning");
-                return;
-            }
-
-            if (this.paymentType === 'pix_asaas' && amountValue < 5) {
-                self.$myFunctions.showFeedbackModal(self, "Atenção", "O valor mínimo para gerar Pix nesta integração é de R$ 5,00.", "warning");
-                return;
-            }
-
-            let payment = {
-                sale_id: this.sale.id,
-                amount: amountValue,
-                payment_type: this.paymentType,
-                customer_id: this.sale.customer_id
-            };
-
-            self.paymentLoading = true;
-            self.$base.api.post("/sales/insert_payment", payment).then(async (response) => {
-                if (response.data && response.data.pix) {
-                    self.pixData = response.data.pix;
-                    self.sale.pix_payload = response.data.pix.payload;
-                    self.sale.pix_expiration_date = response.data.pix.expirationDate;
-                    self.sale.pix_asaas_id = response.data.pix.paymentId;
-                    self.sale.pix_encoded_image = response.data.pix.encodedImage;
-
-                    self.iniciarPollingDePagamento();
-
-                } else {
-                    const updated = await self.$base.api.get(`/sales/${self.sale.id}`);
-                    Object.assign(self.sale, updated.data.returnObj);
-
-                    self.paymentType = "";
-                    $("#amount").val("");
-                    self.showPaymentModal = false;
-                    self.$myFunctions.showFeedbackModal(self, "Sucesso", "Pagamento registrado com sucesso!", "success");
-                }
-            }).catch((error) => {
-                self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao processar o pagamento.", "error");
-            }).finally(() => { self.paymentLoading = false; });
-        },
-        iniciarPollingDePagamento() {
-            let self = this;
-            const paymentId = self.pixData?.paymentId || self.sale.pix_asaas_id;
-
-            if (self.pollingInterval) {
-                clearInterval(self.pollingInterval);
-            }
-
-            self.pollingInterval = setInterval(() => {
-
-                self.$base.api.get(`/sales/${self.sale.id}`).then((response) => {
-                    let vendaAtualizada = response.data.returnObj;
-
-                    self.sale.payments = vendaAtualizada.payments || [];
-
-                    let pixConfirmado = self.sale.payments.find(p => p.external_id === paymentId);
-
-                    if (pixConfirmado) {
-                        clearInterval(self.pollingInterval);
-                        Object.assign(self.sale, vendaAtualizada);
-
-                        self.pixData = null;
-                        self.sale.pix_payload = null;
-                        self.sale.pix_expiration_date = null;
-                        self.paymentType = "";
-
-                        self.showPaymentModal = false;
-
-                        self.$emit("savedContent");
-
-                        self.$myFunctions.showFeedbackModal(self, "Sucesso!", "Pagamento via PIX recebido e confirmado na hora!", "success");
-                    }
-                }).catch(() => {
-                });
-
-            }, 5000);
-        },
-        copyPix: function () {
-            navigator.clipboard.writeText(this.pixData.payload).then(() => {
-                this.$myFunctions.showFeedbackModal(this, "Sucesso", "Código PIX copiado!", "success");
-            }).catch(() => this.$myFunctions.showFeedbackModal(this, "Atenção", "Selecione e copie o código no campo Pix Copia e Cola.", "warning"));
-        },
-        cancelarPix: function () {
-            let self = this;
-            clearInterval(self.pollingInterval);
-
-            if (self.sale.id) {
-                self.$base.api.post("/sales/cancel_pix", { sale_id: self.sale.id }).then(() => {
-                    self.pixData = null;
-                    self.sale.pix_payload = null;
-                    self.sale.pix_expiration_date = null;
-                    self.paymentType = "";
-                    self.showPaymentModal = false;
-                }).catch(error => {
-                    self.iniciarPollingDePagamento();
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Não foi possível cancelar o Pix.", "error");
-                });
-            } else {
-                self.pixData = null;
-                self.showPaymentModal = false;
-            }
-        },
-        saveSale: function (event) {
-            let self = this;
-
-            if (!this.$myFunctions.formCustomValidate(this)) {
-                self.$myFunctions.stopModalLoading(self);
-                return;
-            }
-
-            let saleProducts = this.sale.products.map((product) => {
-                return {
-                    id: product.id,
-                    name: product.name,
-                    value: product.value,
-                    description: product.description,
-                    cost: product.cost,
-                    quantity: product.quantity,
-                    available_quantity: product.available_quantity
-                }
-            })
-
-            let someUnavailable = saleProducts.some(product => product.available_quantity <= 0);
-
-            if (this.sale.status == "realizada" && someUnavailable) {
-                self.$myFunctions.stopModalLoading(self);
-                self.$myFunctions.showFeedbackModal(self, "Atenção", "Impossível concluir a venda, existem produtos indisponíveis!", "warning");
-                return;
-            }
-
-            let sale = {
-                company_id: this.sale.company_id,
-                customer_id: this.sale.customer_id,
-                appointment_id: this.sale.appointment_id,
-                status: this.sale.status,
-                products: saleProducts
-            }
-
-            if (self.sale.id) {
-                self.$base.api.patch("/sales/" + self.sale.id + (event?.submitter?.id == "submit-button2" ? "?finish=true" : ""), sale).then(function () {
-                    self.$myFunctions.getCompany(self);
-                    self.$emit("savedContent");
-                    self.$myFunctions.showFeedbackModal(self, "Sucesso", "Venda atualizada com sucesso.", "success");
-                }).catch((error) => {
-                    self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao atualizar venda.", "error");
-                });
-            } else {
-                self.$base.api.post("/sales", sale).then(function () {
-                    self.$myFunctions.getCompany(self);
-                    self.$emit("savedContent");
-                    self.$myFunctions.showFeedbackModal(self, "Sucesso", "Venda registrada com sucesso.", "success");
-                }).catch((error) => {
-                    self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao registrar venda.", "error");
-                });
-            }
-        }
-    }
-}
+    totalPaid() {
+      return (this.sale.payments || []).reduce(
+        (total, payment) => total + Number(payment.amount),
+        0,
+      );
+    },
+    remainingAmount() {
+      return Math.max(
+        0,
+        Math.round((this.previewTotal - this.totalPaid) * 100) / 100,
+      );
+    },
+    locked() {
+      return (
+        this.sale.status === "realizada" ||
+        !!this.sale.mp_charge_id ||
+        !!this.sale.pix_asaas_id
+      );
+    },
+  },
+  mounted() {
+    this.originalSignature = this.signature();
+  },
+  methods: {
+    signature() {
+      return JSON.stringify([
+        this.sale.customer_id,
+        this.sale.status,
+        this.sale.products.map((product) => [
+          product.id,
+          Number(product.quantity),
+        ]),
+      ]);
+    },
+    payload(status = this.sale.status) {
+      return {
+        company_id: this.sale.company_id,
+        customer_id: this.sale.customer_id,
+        appointment_id: this.sale.appointment_id || null,
+        status,
+        products: this.sale.products.map((product) => ({
+          id: product.id,
+          quantity: Number(product.quantity),
+        })),
+      };
+    },
+    updateSale(updated) {
+      Object.assign(this.sale, updated);
+      this.originalSignature = this.signature();
+      if (updated.status === "realizada") {
+        this.$global.modalUtils.modalSaveButton = "";
+        this.$global.modalUtils.modalSaveButton2 = "";
+        this.$global.modalUtils.modalCancelButton = "Fechar";
+      }
+    },
+    async openPaymentModal() {
+      if (this.preparingPayment) return;
+      this.preparingPayment = true;
+      try {
+        if (!this.locked && this.signature() !== this.originalSignature)
+          await this.$base.api.patch(`/sales/${this.sale.id}`, this.payload());
+        const updated = (await this.$base.api.get(`/sales/${this.sale.id}`))
+          .data.returnObj;
+        this.updateSale(updated);
+        this.showPaymentModal = true;
+      } catch (error) {
+        this.$myFunctions.showFeedbackModal(
+          this,
+          "Não foi possível abrir o pagamento",
+          error.response?.data?.message ||
+            error.response?.data ||
+            "Salve a venda e tente novamente.",
+          "error",
+        );
+      } finally {
+        this.preparingPayment = false;
+      }
+    },
+    retornaMetodo(value) {
+      return (
+        {
+          pix_mercadopago: "Pix Mercado Pago",
+          pix_asaas: "Pix Asaas",
+          pix: "Pix manual",
+          cartao_debito: "Cartão de débito",
+          cartao_credito: "Cartão de crédito",
+          dinheiro: "Dinheiro",
+        }[value] || value
+      );
+    },
+    addProduct() {
+      if (!this.idProductToAdd || this.locked) return;
+      const product = this.$global.company.products.find(
+        (item) => item.id == this.idProductToAdd,
+      );
+      const existing = this.sale.products.find(
+        (item) => item.id === product.id,
+      );
+      const quantity =
+        Number(this.quantityProductToAdd) + Number(existing?.quantity || 0);
+      const available = Number(
+        existing?.available_quantity ?? product.available_quantity,
+      );
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > available) {
+        this.$myFunctions.showFeedbackModal(
+          this,
+          "Atenção",
+          "Quantidade inválida ou superior ao estoque disponível.",
+          "warning",
+        );
+        return;
+      }
+      if (existing) existing.quantity = quantity;
+      else
+        this.sale.products = [...this.sale.products, { ...product, quantity }];
+      this.idProductToAdd = "";
+      this.quantityProductToAdd = 1;
+    },
+    handleDeleteProduct(product) {
+      if (!this.locked)
+        this.sale.products.splice(
+          this.sale.products.findIndex((item) => item.id === product.id),
+          1,
+        );
+    },
+    setUser(customer) {
+      if (!this.locked) {
+        this.sale.customer_id = customer.id;
+        this.sale.customer_name = customer.name;
+      }
+    },
+    async saveSale(event) {
+      if (!this.$myFunctions.formCustomValidate(this)) {
+        this.$myFunctions.stopModalLoading(this);
+        return;
+      }
+      try {
+        if (this.sale.id)
+          await this.$base.api.patch(
+            `/sales/${this.sale.id}${event?.submitter?.id === "submit-button2" ? "?finish=true" : ""}`,
+            this.payload(),
+          );
+        else await this.$base.api.post("/sales", this.payload());
+        await this.$myFunctions.getCompany(this);
+        this.$emit("savedContent");
+        this.$myFunctions.showFeedbackModal(
+          this,
+          "Sucesso",
+          this.sale.id
+            ? "Venda atualizada com sucesso."
+            : "Venda registrada com sucesso.",
+          "success",
+        );
+      } catch (error) {
+        this.$myFunctions.stopModalLoading(this);
+        this.$myFunctions.showFeedbackModal(
+          this,
+          "Erro",
+          error.response?.data?.message ||
+            error.response?.data ||
+            "Não foi possível salvar a venda.",
+          "error",
+        );
+      }
+    },
+  },
+};
 </script>
+
 <style scoped>
 .sale-summary {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-
-    & table {
-        width: 100%;
-    }
-
-    &>p {
-        margin-bottom: var(--space-6);
-    }
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-
+.sale-summary table {
+  width: 100%;
+}
+.sale-summary table td,
+.sale-summary th {
+  padding: 6px 0;
+  font-size: 13px;
+}
 .sale-subtotal {
-    margin-top: var(--space-3);
+  border-top: 1px solid #e6eae2;
+  padding-top: 12px;
 }
-
+.paid-amount {
+  color: #568746;
+}
+.due-amount {
+  color: #bf5960;
+}
 #insert-payment-button {
-    align-self: flex-end;
-    width: 180px;
+  align-self: flex-end;
+  width: auto;
+  min-width: 180px;
+  margin-top: 8px;
 }
 </style>

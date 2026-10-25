@@ -13,7 +13,7 @@
         <div class="sidebar-menu-wrapper" v-show="isResponsive && sidebarOpen" v-on:click="toggleSidebar()"></div>
         <Header class="header" @toggleMenu="toggleSidebar()" />
         <div class="slot">
-            <div v-if="$global.company && $global.company.asaas_status !== 'APPROVED'"
+            <div v-if="paymentStatus?.provider === 'asaas' && $global.company && $global.company.asaas_status !== 'APPROVED'"
                 class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 shadow-sm">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
@@ -34,6 +34,10 @@
                     </div>
                 </div>
             </div>
+            <div v-if="paymentStatus?.provider === 'mercadopago' && !paymentStatus.destination && $route.path !== '/configuracoes/recebimentos'" class="receiving-reminder">
+                <span><strong>Prepare seus recebimentos.</strong> Cadastre a conta bancária da empresa para cobrar com Pix.</span>
+                <NuxtLink to="/configuracoes/recebimentos">Cadastrar conta →</NuxtLink>
+            </div>
             <slot></slot>
         </div>
     </div>
@@ -46,6 +50,7 @@ export default {
             isResponsive: window.innerWidth <= 1029,
             systemLoading: true,
             initializationError: '',
+            paymentStatus: this.$global.paymentStatus,
             onboardingUrl: "" // Variável adicionada
         }
     },
@@ -77,7 +82,10 @@ export default {
     async created() {
         this.$myFunctions.initSystem(this).then((initialized) => {
             if (!initialized) return;
-            this.fetchAsaasStatus();
+            this.$base.api.get('/payments/mercadopago/status').then(response => {
+                Object.assign(this.paymentStatus, response.data);
+                if (response.data.provider === 'asaas') this.fetchAsaasStatus();
+            }).catch(() => {});
 
             setTimeout(() => {
                 this.systemLoading = false;
@@ -88,6 +96,8 @@ export default {
 </script>
 
 <style>
+.receiving-reminder { padding: 14px 18px; margin-bottom: 22px; border: 1px solid #dfe9d5; border-radius: 10px; background: #f7fbf3; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: #859475; font-size: 12px; }
+.receiving-reminder strong, .receiving-reminder a { color: #567c3f; }
 .sidebar {
     position: fixed;
     top: 0;

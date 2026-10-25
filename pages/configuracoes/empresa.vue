@@ -1,6 +1,7 @@
 <template>
     <section>
         <div class="profile-configurations">
+            <div class="mt-8"><PaymentsReceivingAccount /></div>
             <form @submit.prevent="changeCompanyConfigurations">
                 <p class="fontsize-sm cinza mt-8">INFORMAÇÕES PRINCIPAIS</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
