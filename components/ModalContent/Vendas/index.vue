@@ -49,7 +49,7 @@
                     </template>
                     <template #column-ações="{ item }">
                         <div class="flex space-x-2">
-                            <button class="rounded-button" v-on:click="handleDeleteProduct(item)">
+                            <button type="button" class="rounded-button" v-on:click="handleDeleteProduct(item)">
                                 <font-awesome icon="trash" class="vermelho" />
                             </button>
                         </div>
@@ -120,21 +120,17 @@
                     </template>
                     <template #column-ações="{ item }">
                         <div class="flex space-x-2">
-                            <button type="button" class="rounded-button" v-on:click="handleDeletePayment(item)"
-                                title="Cancelar Pagamento" v-if="item.payment_type != 'dinheiro'">
-                                <font-awesome icon="rotate-left" class="vermelho" />
-                            </button>
+                            <span class="text-sm">Confirmado</span>
                         </div>
                     </template>
                 </UtilsDataTable>
-                <button class="btn btn-blue" id="insert-payment-button" type="button" @click="openPaymentModal">Inserir
+                <button class="btn btn-blue" id="insert-payment-button" type="button" @click="openPaymentModal" :disabled="sale.status !== 'em_aberto' || remainingAmount <= 0">Inserir
                     pagamento</button>
             </div>
         </div>
         <input type="submit" id="submit-button" />
         <input type="submit" id="submit-button2" />
     </form>
-    <div class="payment-modal-wrapper" v-if="showPaymentModal" v-on:click="showPaymentModal = !showPaymentModal"></div>
     <div class="payment-modal-wrapper" v-if="showPaymentModal" v-on:click="showPaymentModal = !showPaymentModal"></div>
     <div class="small-modal" :class="{ 'show': showPaymentModal }" data-title="Adicionar pagamento">
 
@@ -143,7 +139,7 @@
                 <label for="payment_type">Forma de pagamento</label>
                 <select id="payment_type" required v-model="paymentType">
                     <option value="">* Selecione *</option>
-                    <option value="pix_asaas">Pix Automático (Gerar QR Code Asaas)</option>
+                    <option value="pix_asaas" :disabled="$global.company.asaas_status !== 'APPROVED'">Pix Automático (Gerar QR Code Asaas)</option>
                     <option value="pix">Pix (Conferência Manual)</option>
                     <option value="cartao_debito" v-if="false">Cartão de Débito</option>
                     <option value="cartao_credito" v-if="false">Cartão de Crédito</option>
@@ -154,13 +150,13 @@
                 <label for="amount">Valor</label>
                 <input type="text" id="amount" value="R$ 0,00" required @input="$myFunctions.inputMoneyCheck($event)">
             </div>
-            <button class="btn btn-primary" type="submit">Adicionar</button>
+            <button class="btn btn-primary" type="submit" :disabled="paymentLoading">{{ paymentLoading ? 'Processando...' : 'Adicionar' }}</button>
         </form>
 
         <div v-else-if="pixData && pixData.payload" class="flex flex-col items-center justify-center p-2 text-center">
             <p class="fontsize-sm cinza mb-4">Escaneie o QR Code abaixo no app do seu banco.</p>
 
-            <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixData.payload)}`"
+            <img v-if="pixData.encodedImage" :src="`data:image/png;base64,${pixData.encodedImage}`"
                 class="w-48 h-48 border p-2 mb-4 bg-white" style="border-radius: 8px;" alt="QR Code PIX" />
 
             <div class="w-full relative mb-4 text-left">
@@ -196,6 +192,7 @@ export default {
             paymentType: "",
             showPaymentModal: false,
             pixData: null,
+            paymentLoading: false,
             pollingInterval: null
         }
     },
@@ -245,20 +242,19 @@ export default {
                 let expDate = new Date(this.sale.pix_expiration_date);
                 if (expDate > new Date()) {
                     this.pixData = {
-                        payload: this.sale.pix_payload
+                        payload: this.sale.pix_payload,
+                        encodedImage: this.sale.pix_encoded_image,
+                        paymentId: this.sale.pix_asaas_id
                     };
                     this.iniciarPollingDePagamento();
                 } else {
-                    this.pixData = null;
-                    this.$myFunctions.showFeedbackModal(this, "Aviso", "O PIX gerado anteriormente expirou. Por favor, gere um novo.", "warning");
+                    this.pixData = { payload: this.sale.pix_payload, encodedImage: this.sale.pix_encoded_image, paymentId: this.sale.pix_asaas_id };
+                    this.$myFunctions.showFeedbackModal(this, "Aviso", "Este Pix expirou. Cancele esta cobrança antes de gerar outra.", "warning");
                 }
             } else {
                 this.pixData = null;
             }
             this.showPaymentModal = true;
-        },
-        handleDeletePayment: function (payment) {
-            console.log("Estornar pagamento: ", payment)
         },
         retornaMetodo: function (metodo) {
             switch (metodo) {
@@ -277,16 +273,21 @@ export default {
         addProduct: function () {
             if (this.idProductToAdd != "" && this.quantityProductToAdd != 0) {
                 let indexTargetProduct = this.$global.company.products.findIndex(product => product.id == this.idProductToAdd);
-                let targetProduct = this.$global.company.products[indexTargetProduct];
+                let targetProduct = { ...this.$global.company.products[indexTargetProduct] };
 
                 if (targetProduct.available_quantity <= 0) {
                     this.$myFunctions.showFeedbackModal(this, "Atenção", "Produto indisponível no estoque!", "warning");
                     return;
                 }
 
-                targetProduct.quantity = this.quantityProductToAdd;
-
-                this.sale.products.push(targetProduct);
+                const existing = this.sale.products.find(product => product.id === targetProduct.id);
+                const quantity = Number(this.quantityProductToAdd) + Number(existing?.quantity || 0);
+                if (!Number.isInteger(quantity) || quantity < 1 || quantity > targetProduct.available_quantity) {
+                    this.$myFunctions.showFeedbackModal(this, 'Atenção', 'Quantidade inválida ou superior ao estoque disponível.', 'warning');
+                    return;
+                }
+                if (existing) existing.quantity = quantity;
+                else this.sale.products.push({ ...targetProduct, quantity });
                 this.idProductToAdd = "";
                 this.quantityProductToAdd = 0;
             }
@@ -301,10 +302,15 @@ export default {
         },
         insertPayment: function () {
             let self = this;
-            let amountValue = this.$myFunctions.returnFloatNumber($("#amount").val());
+            if (this.paymentLoading) return;
+            let amountValue = Number(this.$myFunctions.returnFloatNumber($("#amount").val()));
+            if (!Number.isFinite(amountValue) || amountValue <= 0 || amountValue > this.remainingAmount) {
+                self.$myFunctions.showFeedbackModal(self, "Atenção", "Informe um valor maior que zero e até o saldo em aberto.", "warning");
+                return;
+            }
 
             if (this.paymentType === 'pix_asaas' && amountValue < 5) {
-                self.$myFunctions.showFeedbackModal(self, "Atenção", "O valor mínimo estipulado pelo Banco Central para gerar um QRCode Pix via API é de R$ 5,00.", "warning");
+                self.$myFunctions.showFeedbackModal(self, "Atenção", "O valor mínimo para gerar Pix nesta integração é de R$ 5,00.", "warning");
                 return;
             }
 
@@ -315,23 +321,20 @@ export default {
                 customer_id: this.sale.customer_id
             };
 
-            self.$base.api.post("/sales/insert_payment", payment).then((response) => {
+            self.paymentLoading = true;
+            self.$base.api.post("/sales/insert_payment", payment).then(async (response) => {
                 if (response.data && response.data.pix) {
                     self.pixData = response.data.pix;
                     self.sale.pix_payload = response.data.pix.payload;
                     self.sale.pix_expiration_date = response.data.pix.expirationDate;
+                    self.sale.pix_asaas_id = response.data.pix.paymentId;
+                    self.sale.pix_encoded_image = response.data.pix.encodedImage;
 
                     self.iniciarPollingDePagamento();
 
                 } else {
-                    if (!self.sale.payments) {
-                        self.sale.payments = [];
-                    }
-
-                    self.sale.payments.push({
-                        amount: amountValue,
-                        payment_type: self.paymentType
-                    });
+                    const updated = await self.$base.api.get(`/sales/${self.sale.id}`);
+                    Object.assign(self.sale, updated.data.returnObj);
 
                     self.paymentType = "";
                     $("#amount").val("");
@@ -339,11 +342,12 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", "Pagamento registrado com sucesso!", "success");
                 }
             }).catch((error) => {
-                self.$myFunctions.showFeedbackModal(self, "Erro", "Erro ao processar o pagamento.", "error");
-            });
+                self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao processar o pagamento.", "error");
+            }).finally(() => { self.paymentLoading = false; });
         },
         iniciarPollingDePagamento() {
             let self = this;
+            const paymentId = self.pixData?.paymentId || self.sale.pix_asaas_id;
 
             if (self.pollingInterval) {
                 clearInterval(self.pollingInterval);
@@ -352,14 +356,15 @@ export default {
             self.pollingInterval = setInterval(() => {
 
                 self.$base.api.get(`/sales/${self.sale.id}`).then((response) => {
-                    let vendaAtualizada = response.data;
+                    let vendaAtualizada = response.data.returnObj;
 
                     self.sale.payments = vendaAtualizada.payments || [];
 
-                    let pixConfirmado = self.sale.payments.find(p => p.payment_type === 'pix_asaas');
+                    let pixConfirmado = self.sale.payments.find(p => p.external_id === paymentId);
 
                     if (pixConfirmado) {
                         clearInterval(self.pollingInterval);
+                        Object.assign(self.sale, vendaAtualizada);
 
                         self.pixData = null;
                         self.sale.pix_payload = null;
@@ -378,8 +383,9 @@ export default {
             }, 5000);
         },
         copyPix: function () {
-            navigator.clipboard.writeText(this.pixData.payload);
-            this.$myFunctions.showFeedbackModal(this, "Sucesso", "Código PIX copiado!", "success");
+            navigator.clipboard.writeText(this.pixData.payload).then(() => {
+                this.$myFunctions.showFeedbackModal(this, "Sucesso", "Código PIX copiado!", "success");
+            }).catch(() => this.$myFunctions.showFeedbackModal(this, "Atenção", "Selecione e copie o código no campo Pix Copia e Cola.", "warning"));
         },
         cancelarPix: function () {
             let self = this;
@@ -392,6 +398,9 @@ export default {
                     self.sale.pix_expiration_date = null;
                     self.paymentType = "";
                     self.showPaymentModal = false;
+                }).catch(error => {
+                    self.iniciarPollingDePagamento();
+                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Não foi possível cancelar o Pix.", "error");
                 });
             } else {
                 self.pixData = null;
@@ -435,7 +444,7 @@ export default {
             }
 
             if (self.sale.id) {
-                self.$base.api.patch("/sales/" + self.sale.id + (event.submitter.id == "submit-button2" ? "?finish=true" : ""), sale).then(function () {
+                self.$base.api.patch("/sales/" + self.sale.id + (event?.submitter?.id == "submit-button2" ? "?finish=true" : ""), sale).then(function () {
                     self.$myFunctions.getCompany(self);
                     self.$emit("savedContent");
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", "Venda atualizada com sucesso.", "success");

@@ -233,7 +233,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     let cleaned = string
       .toString()
       .replace(/R\$\s?/g, "")
-      .replace(",", ".");
+      .trim();
+    if (cleaned.includes(',')) cleaned = cleaned.replace(/\./g, '').replace(',', '.');
     let formattedNumber = parseFloat(cleaned);
 
     return formattedNumber.toFixed(2);
@@ -342,8 +343,8 @@ export default defineNuxtPlugin((nuxtApp) => {
       if (jwt == "Bearer null") {
         if (isValidRoute(pathName)) {
           window.location.href = "/entrar";
-          return;
         }
+        return resolve(false);
       } else {
         let data = {
           token: jwt,
@@ -367,12 +368,12 @@ export default defineNuxtPlugin((nuxtApp) => {
                 window.location.href = "/agenda";
               }, 1000);
             }
-            resolve();
+            resolve(true);
           })
           .catch(function () {
             // Caso contrário ele é deslogado e enviado para login.
             logoutUser();
-            return;
+            resolve(false);
           })
           .then(function () {
             // Chamada recursiva da função se o usuario estiver na home
@@ -406,54 +407,34 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   const checkAndSetJwt = (instance) => {
-    return new Promise((resolve) => {
-      let interval = setInterval(() => {
-        let jwt = getJwtInLocalStorage();
-
-        if (jwt != null) {
-          instance.$base.api.defaults.headers.common["Authorization"] =
-            `Bearer ${jwt}`;
-
-          Object.assign(instance.$global.jwtLoaded, { loaded: true });
-
-          clearInterval(interval);
-          resolve();
-        }
-      }, 100);
-    });
+    const jwt = getJwtInLocalStorage();
+    if (!jwt) return Promise.resolve(false);
+    instance.$base.api.defaults.headers.common.Authorization = `Bearer ${jwt}`;
+    Object.assign(instance.$global.jwtLoaded, { loaded: true });
+    return Promise.resolve(true);
   };
 
-  const initSystem = (instance) => {
-    return new Promise((resolve) => {
-      checkAndSetJwt(instance).then(() => {
-        checkIfUserIsAuthenticated(instance, true).then(() => {
-          getUnitsOfMeasurement(instance).then(() => {
-            getUser(instance).then(() => {
-              getCompany(instance).then(() => {
-                returnBusinessTypes(instance).then(() => {
-                  resolve();
-                });
-              });
-            });
-          });
-        });
-      });
-    });
+  const initSystem = async (instance) => {
+    if (!await checkAndSetJwt(instance)) {
+      window.location.href = '/entrar';
+      return false;
+    }
+    if (!await checkIfUserIsAuthenticated(instance, true)) return false;
+    await Promise.all([getUnitsOfMeasurement(instance), returnBusinessTypes(instance)]);
+    await getUser(instance);
+    if (!instance.$global.selectedCompany.id) {
+      window.location.href = '/criar-empresa';
+      return false;
+    }
+    await getCompany(instance);
+    return true;
   };
 
   //Métodos de retorno
 
-  const returnBusinessTypes = (instance) => {
-    return new Promise((resolve) => {
-      instance.$base.api
-        .get("/companies/business_types")
-        .then(function (response) {
-          Object.assign(instance.$global.business_types, {
-            types: response.data.returnObj,
-          });
-          resolve();
-        });
-    });
+  const returnBusinessTypes = async (instance) => {
+    const response = await instance.$base.api.get('/companies/business_types');
+    Object.assign(instance.$global.business_types, { types: response.data.returnObj });
   };
 
   const getAddressData = (cep) => {
@@ -478,24 +459,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     });
   };
 
-  const getCompany = function (instance) {
-    return new Promise((resolve, reject) => {
-      instance.$base.api
-        .get("/companies")
-        .then(function (response) {
-          Object.assign(instance.$global.company, response.data.returnObj);
-
-          resolve();
-        })
-        .catch((error) => {})
-        .then(() => {
-          if (!instance.$global.company.id) {
-            localStorage.removeItem("selected_company");
-            instance.$router.push("/criar-empresa");
-            reject();
-          }
-        });
-    });
+  const getCompany = async function (instance) {
+    const response = await instance.$base.api.get('/companies');
+    Object.assign(instance.$global.company, response.data.returnObj);
   };
 
   const getUser = function (instance) {
@@ -509,9 +475,11 @@ export default defineNuxtPlugin((nuxtApp) => {
         .then(function (response) {
           Object.assign(instance.$global.user, response.data.returnObj);
 
-          let company_id =
-            localStorage.getItem("selected_company") ||
-            response.data.returnObj.companies[0];
+          const ids = response.data.returnObj.companies;
+          const selected = Number(localStorage.getItem('selected_company'));
+          const company_id = ids.includes(selected) ? selected : ids[0] || null;
+          if (company_id) localStorage.setItem('selected_company', String(company_id));
+          else localStorage.removeItem('selected_company');
 
           Object.assign(instance.$global.selectedCompany, { id: company_id });
 
@@ -519,20 +487,13 @@ export default defineNuxtPlugin((nuxtApp) => {
             instance.$global.selectedCompany.id;
 
           resolve();
-        });
+        }).catch(reject);
     });
   };
 
-  const getUnitsOfMeasurement = function (instance) {
-    return new Promise((resolve) => {
-      instance.$base.api
-        .get("/utils/units_of_measurement")
-        .then(function (response) {
-          instance.$global.unitsOfMeasurement = response.data.returnObj;
-
-          resolve();
-        });
-    });
+  const getUnitsOfMeasurement = async function (instance) {
+    const response = await instance.$base.api.get('/utils/units_of_measurement');
+    instance.$global.unitsOfMeasurement = response.data.returnObj;
   };
 
   const hasPermission = function (instance) {

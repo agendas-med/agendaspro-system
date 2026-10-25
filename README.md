@@ -1,5 +1,9 @@
 # Nuxt 3 Minimal Starter
 
+## Ambiente local AgendasPro
+
+Suba primeiro o MariaDB e a API conforme o README de `agendaspro-core`. Execute `npm run dev` e acesse `http://localhost:8080`. A variável `NUXT_PUBLIC_API_BASE` define o backend (padrão `http://localhost:3001`). Para produção, configure a URL pública da API. Valide a compilação com `npm run build`.
+
 Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
 ## Setup

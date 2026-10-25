@@ -1,6 +1,10 @@
 <template>
     <div class="w-full h-full flex items-center justify-center absolute" v-if="systemLoading">
-        <UtilsLoading :loading="true" />
+        <div v-if="initializationError" class="text-center p-6">
+            <p>{{ initializationError }}</p>
+            <button type="button" class="btn btn-primary mt-4" @click="reloadSystem">Tentar novamente</button>
+        </div>
+        <UtilsLoading v-else :loading="true" />
     </div>
     <div v-else>
         <SidebarMenu class="sidebar" ref="sidebar"
@@ -17,11 +21,11 @@
                     </div>
                     <div class="ml-3">
                         <p class="text-sm text-yellow-700 font-bold">
-                            Sua conta de recebimentos ainda não está aprovada!
+                            Recebimentos online indisponíveis
                         </p>
                         <p class="text-sm text-yellow-600 mt-1">
-                            Sua empresa está oculta no WhatsApp e agendamentos estão bloqueados.
-                            Para liberar o sistema, é necessário enviar os documentos da sua empresa.
+                            Você pode gerenciar a agenda e registrar pagamentos manuais.
+                            Para receber Pix automaticamente, configure e aprove sua conta Asaas.
                         </p>
                         <a v-if="onboardingUrl" :href="onboardingUrl" target="_blank"
                             class="mt-3 inline-block bg-yellow-400 text-yellow-900 px-4 py-2 rounded font-bold text-xs hover:bg-yellow-500 transition">
@@ -41,10 +45,12 @@ export default {
             sidebarOpen: false,
             isResponsive: window.innerWidth <= 1029,
             systemLoading: true,
+            initializationError: '',
             onboardingUrl: "" // Variável adicionada
         }
     },
     methods: {
+        reloadSystem() { window.location.reload(); },
         toggleSidebar: function () {
             this.sidebarOpen = !this.sidebarOpen;
         },
@@ -69,13 +75,14 @@ export default {
         }
     },
     async created() {
-        this.$myFunctions.initSystem(this).then(() => {
+        this.$myFunctions.initSystem(this).then((initialized) => {
+            if (!initialized) return;
             this.fetchAsaasStatus();
 
             setTimeout(() => {
                 this.systemLoading = false;
             }, 500)
-        });
+        }).catch(() => { this.initializationError = 'Não foi possível carregar o sistema. Verifique a conexão com a API e tente novamente.'; });
     }
 }
 </script>
