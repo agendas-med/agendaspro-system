@@ -34,6 +34,18 @@
         </div>
         <div v-if="terminal" class="terminal-note">{{ terminal }}</div>
         <template v-else>
+          <div v-if="charge?.api === 'checkout'" class="checkout-introduction">
+            <h3>Pagamento seguro pelo Mercado Pago</h3>
+            <p>
+              Abra o checkout para escolher Pix ou cartão. A confirmação
+              aparecerá nesta venda automaticamente.
+            </p>
+            <p>
+              Comissão AgendasPro: {{ money(charge.commission) }} ({{
+                charge.commission_bps / 100
+              }}%). Tarifas do Mercado Pago à parte.
+            </p>
+          </div>
           <img
             v-if="qrImage"
             :src="qrImage"
@@ -42,10 +54,14 @@
             alt="QR Code para pagamento Pix"
             class="pix-qr"
           />
-          <div v-else class="qr-loading" role="status">
+          <div
+            v-else-if="charge?.api !== 'checkout'"
+            class="qr-loading"
+            role="status"
+          >
             <span class="spinner"></span>Preparando seu Pix…
           </div>
-          <p class="pix-instructions">
+          <p v-if="charge?.api !== 'checkout'" class="pix-instructions">
             {{
               configuration?.environment === "test"
                 ? "Este Pix pertence ao ambiente de teste."
@@ -69,7 +85,11 @@
             target="_blank"
             rel="noopener noreferrer"
             class="payment-link"
-            >Abrir página do Pix ↗</a
+            >{{
+              charge?.api === "checkout"
+                ? "Abrir checkout do Mercado Pago ↗"
+                : "Abrir página do Pix ↗"
+            }}</a
           >
           <div class="waiting-status" role="status">
             <span class="spinner"></span>Aguardando confirmação do pagamento
@@ -78,13 +98,13 @@
             A confirmação aparece aqui automaticamente.
           </p>
           <button
-            v-if="pix?.paymentId"
+            v-if="pix?.paymentId || charge?.api === 'checkout'"
             type="button"
             class="cancel-pix"
             :disabled="busy || refreshing"
             @click="cancelPix"
           >
-            Cancelar cobrança Pix
+            Encerrar cobrança
           </button>
         </template>
       </div>
@@ -95,9 +115,9 @@
         <div v-if="!onlineReady" class="setup-note">
           <p>
             {{
-              configuration?.destination
+              configuration?.connection
                 ? "O recebimento Pix online ainda não está disponível."
-                : "Cadastre uma conta de recebimento para gerar Pix online."
+                : "Conecte a conta Mercado Pago para receber online."
             }}
           </p>
           <NuxtLink to="/configuracoes/recebimentos" @click="$emit('close')"
@@ -114,11 +134,11 @@
           required
         >
           <option
-            value="pix_mercadopago"
+            value="mercadopago"
             v-if="configuration?.provider !== 'asaas'"
             :disabled="!onlineReady"
           >
-            Pix online · Mercado Pago
+            Pix ou cartão · Mercado Pago
           </option>
           <option value="pix_asaas" v-else :disabled="!onlineReady">
             Pix online · Asaas
@@ -191,16 +211,22 @@
           type="submit"
           form="sale-payment-form"
           class="pay-primary"
-          :disabled="loading || busy || (method.includes('_') && !onlineReady)"
+          :disabled="
+            loading ||
+            busy ||
+            ((method === 'mercadopago' || method.includes('_')) && !onlineReady)
+          "
         >
           {{
             busy
               ? "Processando…"
               : intent
                 ? "Tentar novamente"
-                : method.includes("_")
-                  ? "Gerar Pix"
-                  : "Registrar pagamento"
+                : method === "mercadopago"
+                  ? "Gerar checkout"
+                  : method.includes("_")
+                    ? "Gerar Pix"
+                    : "Registrar pagamento"
           }}
         </button></template
       >
@@ -218,7 +244,7 @@ export default {
     busy: false,
     refreshing: false,
     configuration: null,
-    method: "pix_mercadopago",
+    method: "mercadopago",
     amount: 0,
     charge: null,
     pix: null,
@@ -250,14 +276,14 @@ export default {
     onlineReady() {
       return this.configuration?.provider === "asaas"
         ? this.$global.company.asaas_status === "APPROVED"
-        : !!(this.configuration?.configured && this.configuration?.destination);
+        : !!(this.configuration?.configured && this.configuration?.connection);
     },
     intentKey() {
       return `agendaspro:pix:${this.$global.selectedCompany.id}:${this.sale.id}`;
     },
     safePaymentUrl() {
       try {
-        const url = new URL(this.pix?.url);
+        const url = new URL(this.charge?.checkout_url || this.pix?.url);
         return url.protocol === "https:" &&
           /(^|\.)mercadopago\.com\.br$/.test(url.hostname)
           ? url.href
@@ -274,9 +300,7 @@ export default {
         await this.$base.api.get("/payments/mercadopago/status")
       ).data;
       this.method =
-        this.configuration.provider === "asaas"
-          ? "pix_asaas"
-          : "pix_mercadopago";
+        this.configuration.provider === "asaas" ? "pix_asaas" : "mercadopago";
       try {
         this.intent = JSON.parse(sessionStorage.getItem(this.intentKey));
       } catch {
@@ -313,6 +337,7 @@ export default {
       return (
         {
           pix_mercadopago: "Pix · Mercado Pago",
+          mercadopago: "Mercado Pago",
           pix_asaas: "Pix · Asaas",
           pix: "Pix manual",
           dinheiro: "Dinheiro",
@@ -336,11 +361,26 @@ export default {
       ).data;
       this.charge = charge;
       await this.setPix(charge.pix);
-      if (["cancelled", "rejected", "expired"].includes(charge.status)) {
+      if (
+        (charge.api !== "checkout" &&
+          ["cancelled", "rejected", "expired"].includes(charge.status)) ||
+        [
+          "creation_failed",
+          "expired",
+          "needs_review",
+          "refunded",
+          "in_mediation",
+        ].includes(charge.status)
+      ) {
         this.terminal = {
           cancelled: "Este Pix foi cancelado.",
           rejected: "Este pagamento foi recusado.",
           expired: "Este Pix expirou.",
+          needs_review: "Este pagamento precisa de revisão financeira.",
+          refunded: "Este pagamento foi devolvido. Consulte os recebimentos.",
+          in_mediation: "Este pagamento está em análise pelo Mercado Pago.",
+          creation_failed:
+            "O Mercado Pago recusou a criação. Confira os dados da empresa e a conexão antes de gerar uma nova cobrança.",
         }[charge.status];
         this.clearIntent();
         clearInterval(this.pollTimer);
@@ -364,7 +404,7 @@ export default {
       }
       this.busy = true;
       try {
-        if (this.method === "pix_mercadopago" && !this.intent) {
+        if (this.method === "mercadopago" && !this.intent) {
           this.intent = {
             key: crypto.randomUUID(),
             amount,
@@ -384,12 +424,12 @@ export default {
           {
             timeout: 45000,
             headers:
-              this.method === "pix_mercadopago"
+              this.method === "mercadopago"
                 ? { "Idempotency-Key": this.intent.key }
                 : {},
           },
         );
-        if (response.data.pix) {
+        if (response.data.pix || response.data.api === "checkout") {
           if (response.data.provider === "mercadopago")
             this.charge = response.data;
           await this.setPix(response.data.pix);
@@ -424,7 +464,10 @@ export default {
         this.$emit("updated-sale", updated);
         if (!this.charge && updated.mp_charge_id)
           await this.readCharge(updated.mp_charge_id);
-        const providerId = this.charge?.pix?.paymentId || this.pix?.paymentId;
+        const providerId =
+          this.charge?.payment_id ||
+          this.charge?.pix?.paymentId ||
+          this.pix?.paymentId;
         const externalId = this.charge ? `mp:${providerId}` : providerId;
         const receipt =
           providerId &&

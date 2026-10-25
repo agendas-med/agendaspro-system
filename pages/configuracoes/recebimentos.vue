@@ -4,7 +4,7 @@
       <span class="welcome-check">✓</span>
       <div>
         <strong>Sua empresa está pronta.</strong>
-        <p>Cadastre a conta de recebimento para começar a cobrar com Pix.</p>
+        <p>Conecte o Mercado Pago para começar a receber.</p>
       </div>
     </div>
     <div class="receivings-heading">
@@ -17,15 +17,24 @@
         >Ambiente de teste</span
       >
     </div>
-    <PaymentsReceivingAccount
-      @loaded="configuration = $event"
-      @saved="loadCharges"
+    <p v-if="connectionMessage" class="callback-message" role="status">
+      {{ connectionMessage }}
+    </p>
+    <PaymentsConnectedAccount
+      v-if="configuration"
+      :settings="configuration"
+      @changed="loadAll"
+    />
+    <PaymentsPlans
+      v-if="configuration?.plan"
+      :settings="configuration"
+      @changed="loadAll"
     />
     <div class="receivings-notes">
       <p>
-        <strong>Como funciona</strong> Seu cliente paga com Pix. Após a
-        confirmação e a liberação do saldo, o repasse é enviado à conta
-        cadastrada.
+        <strong>Como funciona</strong> Seu cliente paga pelo Mercado Pago. A
+        comissão é separada automaticamente e o restante vai para sua conta
+        Mercado Pago, conforme os prazos e as tarifas do provedor.
       </p>
       <p v-if="configuration">
         <strong
@@ -39,14 +48,12 @@
     </div>
     <div v-if="configuration?.environment === 'test'" class="test-note">
       Você está no ambiente de teste. Os pagamentos são simulados e não
-      movimentam dinheiro real.<span v-if="!configuration.payouts_enabled">
-        O envio de repasses ainda não está habilitado.</span
-      >
+      movimentam dinheiro real.
     </div>
     <div class="transactions-heading">
       <div>
         <h3>Recebimentos recentes</h3>
-        <p>Do pagamento do cliente ao repasse para sua conta.</p>
+        <p>Acompanhe os pagamentos e a comissão aplicada em cada venda.</p>
       </div>
       <button
         type="button"
@@ -61,7 +68,7 @@
     <div v-else-if="!loading && !charges.length" class="empty-receivings">
       <span aria-hidden="true">↙</span>
       <h4>Seu próximo recebimento aparece aqui</h4>
-      <p>Gere uma cobrança Pix em uma venda para acompanhar o pagamento.</p>
+      <p>Gere uma cobrança em uma venda para acompanhar o pagamento.</p>
       <NuxtLink to="/vendas">Ir para vendas →</NuxtLink>
     </div>
     <div v-else class="transactions-scroll">
@@ -72,7 +79,7 @@
             <th>Data</th>
             <th>Valor</th>
             <th>Pagamento</th>
-            <th>Repasse</th>
+            <th>Comissão AgendasPro</th>
           </tr>
         </thead>
         <tbody>
@@ -91,12 +98,14 @@
               >
             </td>
             <td>
-              <span :class="{ 'paid-out': charge.payout_status === 'paid' }">{{
-                payoutLabel(charge)
-              }}</span
-              ><small v-if="charge.payout_amount != null"
-                >{{ money(charge.payout_amount) }} líquidos</small
-              >
+              <span>{{
+                charge.api === "checkout" ? money(charge.commission) : "—"
+              }}</span>
+              <small>{{
+                charge.api === "checkout"
+                  ? `${charge.commission_bps / 100}% · ${charge.plan === "premium" ? "Premium" : "Gratuito"}`
+                  : "Pagamento anterior ao split"
+              }}</small>
             </td>
           </tr>
         </tbody>
@@ -108,10 +117,37 @@
 <script>
 export default {
   data: () => ({ configuration: null, charges: [], loading: true, error: "" }),
+  computed: {
+    connectionMessage() {
+      if (this.$route.query.connection === "failed")
+        return "Não foi possível concluir a conexão. Tente conectar novamente pelo botão abaixo.";
+      if (this.$route.query.connection === "success")
+        return String(this.$route.query.company) ===
+          String(this.$global.selectedCompany?.id)
+          ? "Conta Mercado Pago conectada com sucesso."
+          : "Conta conectada. Selecione a empresa que iniciou a conexão para consultá-la.";
+      if (this.$route.query.subscription === "return")
+        return "Autorização recebida. O Premium depende da confirmação do pagamento pelo Mercado Pago.";
+      return "";
+    },
+  },
   mounted() {
-    this.loadCharges();
+    this.loadAll();
   },
   methods: {
+    async loadAll() {
+      try {
+        this.configuration = (
+          await this.$base.api.get("/payments/mercadopago/status")
+        ).data;
+        Object.assign(this.$global.paymentStatus, this.configuration);
+        await this.loadCharges();
+      } catch {
+        this.error =
+          "Não foi possível carregar os recebimentos. Atualize para tentar novamente.";
+        this.loading = false;
+      }
+    },
     money(value) {
       return this.$myFunctions.formatCurrency(value);
     },
@@ -125,6 +161,7 @@ export default {
       return (
         {
           creating: "Gerando Pix",
+          creation_failed: "Criação recusada",
           pending: "Aguardando Pix",
           in_process: "Em análise",
           approved: "Confirmado",
@@ -132,22 +169,10 @@ export default {
           rejected: "Recusado",
           expired: "Expirado",
           refunded: "Devolvido",
+          dispatching: "Criando checkout",
+          needs_review: "Revisão necessária",
           in_mediation: "Em revisão",
         }[status] || status
-      );
-    },
-    payoutLabel(charge) {
-      return (
-        {
-          ready: "Pronto para envio",
-          pending: "Em processamento",
-          paid: "Enviado",
-          needs_review: "Em revisão",
-          unknown: "Aguardando confirmação",
-        }[charge.payout_status] ||
-        (charge.status === "approved"
-          ? "Aguardando liberação"
-          : "Aguardando pagamento")
       );
     },
     async loadCharges() {

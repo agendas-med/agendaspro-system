@@ -156,7 +156,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     ];
   
     nuxtApp.provide('global', {
-        paymentStatus: reactive({ provider: null, destination: null }),
+        paymentStatus: reactive({ provider: null, connection: null }),
         unitsOfMeasurement,
         contentObject,
         company,

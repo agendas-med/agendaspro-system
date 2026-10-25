@@ -331,6 +331,7 @@ export default {
       return (
         {
           pix_mercadopago: "Pix Mercado Pago",
+          mercadopago: "Mercado Pago",
           pix_asaas: "Pix Asaas",
           pix: "Pix manual",
           cartao_debito: "Cartão de débito",

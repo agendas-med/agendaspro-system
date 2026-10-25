@@ -1,7 +1,7 @@
 <template>
     <section>
         <div class="profile-configurations">
-            <div class="mt-8"><PaymentsReceivingAccount /></div>
+            <div class="mt-8 p-5 border rounded-xl bg-green-50"><strong>Recebimentos e plano</strong><p class="text-sm mt-2">Conecte sua conta Mercado Pago e escolha seu plano de pagamentos.</p><NuxtLink to="/configuracoes/recebimentos" class="text-sm underline">Gerenciar recebimentos →</NuxtLink></div>
             <form @submit.prevent="changeCompanyConfigurations">
                 <p class="fontsize-sm cinza mt-8">INFORMAÇÕES PRINCIPAIS</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

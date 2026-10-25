@@ -34,9 +34,9 @@
                     </div>
                 </div>
             </div>
-            <div v-if="paymentStatus?.provider === 'mercadopago' && !paymentStatus.destination && $route.path !== '/configuracoes/recebimentos'" class="receiving-reminder">
-                <span><strong>Prepare seus recebimentos.</strong> Cadastre a conta bancária da empresa para cobrar com Pix.</span>
-                <NuxtLink to="/configuracoes/recebimentos">Cadastrar conta →</NuxtLink>
+            <div v-if="paymentStatus?.provider === 'mercadopago' && !paymentStatus.connection && $route.path !== '/configuracoes/recebimentos'" class="receiving-reminder">
+                <span><strong>Prepare seus recebimentos.</strong> Conecte o Mercado Pago para cobrar seus clientes online.</span>
+                <NuxtLink to="/configuracoes/recebimentos">Conectar conta →</NuxtLink>
             </div>
             <slot></slot>
         </div>
