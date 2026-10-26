@@ -373,9 +373,9 @@ export default {
         ].includes(charge.status)
       ) {
         this.terminal = {
-          cancelled: "Este Pix foi cancelado.",
+          cancelled: "Esta cobrança foi cancelada.",
           rejected: "Este pagamento foi recusado.",
-          expired: "Este Pix expirou.",
+          expired: "Esta cobrança expirou.",
           needs_review: "Este pagamento precisa de revisão financeira.",
           refunded: "Este pagamento foi devolvido. Consulte os recebimentos.",
           in_mediation: "Este pagamento está em análise pelo Mercado Pago.",
@@ -519,7 +519,7 @@ export default {
         );
         await this.refreshSale();
         if (!this.confirmed) {
-          this.terminal = "Esta cobrança Pix foi cancelada.";
+          this.terminal = "Esta cobrança foi cancelada.";
           this.clearIntent();
           clearInterval(this.pollTimer);
         }
