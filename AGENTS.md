@@ -1,6 +1,6 @@
 # agendaspro-system
 
-Front-end Nuxt 3 + Tailwind do AgendasPro. A API é `../agendaspro-core` (suba o MariaDB e a API primeiro). `NUXT_PUBLIC_API_BASE` define o backend (padrão `http://localhost:3001`); em dev o site abre em `http://localhost:8080`. Regras de publicação e de interface da pasta pai: `../AGENTS.md`.
+Front-end Nuxt 3 + Tailwind do AgendasPro. A API é `../agendaspro-core` (suba o MariaDB e a API primeiro). `NUXT_PUBLIC_API_BASE` define o backend (padrão `http://localhost:3001`); em dev o site abre em `http://localhost:8080`.
 
 Scripts: `dev`, `build`, `generate`, `preview`. Valide mudanças com `npm run build`.
 
