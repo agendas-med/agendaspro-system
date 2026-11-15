@@ -43,7 +43,8 @@ function stripBearer(value) {
 }
 
 function isAuthUrl(url) {
-  const path = String(url || "").split("?")[0];
+  // Normaliza a barra inicial: "users/login" e "/users/login" são a mesma rota.
+  const path = "/" + String(url || "").split("?")[0].replace(/^\/+/, "");
   return AUTH_PATHS.some((p) => path.endsWith(p));
 }
 

@@ -23,7 +23,7 @@ export default {
     },
     methods: {
         handleLoginSuccess(response) {
-            this.$base.api.post("users/google-login", { token: response.code }).then((results) => {
+            this.$base.api.post("/users/google-login", { token: response.code }).then((results) => {
                 this.$myFunctions.storeLoginResponse(this, results.data);
                 this.$emit("response", { msg: "Usuário autenticado com sucesso", type: "success" });
 

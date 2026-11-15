@@ -83,13 +83,23 @@ export default {
             }
             this.$emit("closeModal");
         },
-        saveData: function () {
+        // Clica no submit escondido do formulário do conteúdo. Se a validação nativa (required/pattern)
+        // vai bloquear o envio, o handler nunca roda: devolve o botão ao normal para não ficar girando.
+        submitForm: function (buttonId) {
             this.$global.modalUtils.isLoading = true;
-            setTimeout(() => { $("#submit-button").click(); }, 50);
+            setTimeout(() => {
+                const button = document.getElementById(buttonId);
+                if (button && button.form && !button.form.checkValidity()) {
+                    this.$global.modalUtils.isLoading = false;
+                }
+                $("#" + buttonId).click();
+            }, 50);
+        },
+        saveData: function () {
+            this.submitForm("submit-button");
         },
         saveData2: function () {
-            this.$global.modalUtils.isLoading = true;
-            setTimeout(() => { $("#submit-button2").click(); }, 50);
+            this.submitForm("submit-button2");
         }
     },
     beforeUnmount: function () {

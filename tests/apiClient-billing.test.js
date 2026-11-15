@@ -88,4 +88,22 @@ describe("login Google", () => {
     expect(storage.getItem(TOKEN_KEY)).toBe("g-jwt");
     expect(storage.getItem(REFRESH_KEY)).toBe("g-refresh");
   });
+
+  it("401 no google-login (com ou sem barra inicial) é credencial inválida, não token expirado", async () => {
+    for (const url of ["/users/google-login", "users/google-login"]) {
+      const calls = [];
+      const storage = memoryStorage({ [TOKEN_KEY]: "old", [REFRESH_KEY]: "r" });
+      const adapter = async (config) => {
+        calls.push(`${config.method} ${config.url}`);
+        const response = { data: { message: "Falha no login" }, status: 401, statusText: "", headers: {}, config, request: {} };
+        throw new axios.AxiosError("401", "ERR_BAD_REQUEST", config, {}, response);
+      };
+      const { api } = createApiClient({ axios, baseURL: "http://x", storage, adapter });
+
+      await api.post(url, { token: "c" }).catch(() => {});
+
+      expect(calls).toHaveLength(1);
+      expect(storage.getItem(TOKEN_KEY)).toBe("old");
+    }
+  });
 });
