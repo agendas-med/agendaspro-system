@@ -31,7 +31,7 @@ export default {
             }).catch((error) => {
                 self.$myFunctions.stopModalLoading(self);
 
-                const errorMsg = error.response?.data?.message || error.response?.data || "Ocorreu um erro ao tentar excluir.";
+                const errorMsg = self.$myFunctions.errorMessage(error, "Ocorreu um erro ao tentar excluir.");
                 self.$myFunctions.showFeedbackModal(self, "Não foi possível excluir", errorMsg, "error");
             });
         }

@@ -16,17 +16,17 @@
             </template>
             <template #column-ações="{ item }">
                 <div class="flex space-x-2" v-if="item.id != null && item.id != $global.user.id">
-                    <button class="rounded-button" v-on:click="handleEditUser(item)">
-                        <font-awesome icon="user-pen" class="cinza" />
+                    <button type="button" class="rounded-button" aria-label="Editar usuário" title="Editar usuário" v-on:click="handleEditUser(item)">
+                        <font-awesome icon="user-pen" class="cinza" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleExcludeUser(item)">
-                        <font-awesome icon="trash-can" class="vermelho" />
+                    <button type="button" class="rounded-button" aria-label="Excluir" title="Excluir" v-on:click="handleExcludeUser(item)">
+                        <font-awesome icon="trash-can" class="vermelho" aria-hidden="true" />
                     </button>
                 </div>
             </template>
         </UtilsDataTable>
-        <UtilsModal excludepath="/companies/remove_user/" @closeModal="$myFunctions.closeModal(this); returnUsers();">
-            <ModalContentConfigUsuarios @savedContent="$myFunctions.closeModal(this, []); returnUsers();" />
+        <UtilsModal excludepath="/companies/remove_user/" @closeModal="$myFunctions.closeModal($.proxy); returnUsers();">
+            <ModalContentConfigUsuarios @savedContent="$myFunctions.closeModal($.proxy, []); returnUsers();" />
         </UtilsModal>
     </section>
 </template>
@@ -81,11 +81,15 @@ export default {
                 self.users = response.data.returnObj;
                 self.$emit("savedContent");
             }).catch((error) => {
-                console.log(error.response.data)
+                self.$myFunctions.notifyError(self, error, "Não foi possível carregar os usuários")
             }).then(() => {
                 self.loading = false;
             })
         }
     }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Usuários' })
 </script>

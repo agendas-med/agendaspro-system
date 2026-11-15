@@ -1,7 +1,10 @@
 <template>
     <header class="flex items-center justify-end ">
         <div class="responsive-menu-button">
-            <font-awesome icon="bars" id="responsive-menu-button" v-on:click="$emit('toggleMenu')" />
+            <button type="button" id="responsive-menu-button" aria-label="Abrir menu de navegação"
+                v-on:click="$emit('toggleMenu')">
+                <font-awesome icon="bars" aria-hidden="true" />
+            </button>
         </div>
         <HeaderUser />
     </header>
@@ -20,6 +23,9 @@ export default {
         font-size: 25px;
         cursor: pointer;
         color: var(--cinza);
+        background: none;
+        border: 0;
+        padding: 0;
     }
 
     .responsive-menu-button {

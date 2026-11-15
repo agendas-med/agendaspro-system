@@ -23,8 +23,8 @@
                 </select>
             </div>
             <div class="input-group">
-                <label for="observations">Observações</label>
-                <input type="text" id="observations" required v-model="service.observations">
+                <label for="observations">Observações <span class="optional">(opcional)</span></label>
+                <input type="text" id="observations" v-model="service.observations">
             </div>
 
             <div class="input-checkbox-group" v-if="acceptCustomLocationActive">
@@ -90,7 +90,7 @@ export default {
                 name: self.service.name,
                 value: self.$myFunctions.returnFloatNumber($("#value").val()),
                 cost: self.$myFunctions.returnFloatNumber($("#cost").val()),
-                observations: self.service.observations,
+                observations: self.service.observations || "",
                 duration: self.service.duration,
                 requires_location: self.service.requires_location,
                 accepts_quantity: self.service.accepts_quantity,
@@ -103,7 +103,7 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", response.data.message || "Serviço salvo com sucesso.", "success");
                 }).catch((error) => {
                     self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Ocorreu um erro ao salvar o serviço.", "error");
+                    self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Ocorreu um erro ao salvar o serviço."), "error");
                 });
         }
     },

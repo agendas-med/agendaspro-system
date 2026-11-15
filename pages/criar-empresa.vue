@@ -96,7 +96,6 @@
 
 <script>
 export default {
-  layout: 'cleanPage',
   data() {
     return {
       name: "", business_type: "", email: "", phone: "", document: "",
@@ -119,7 +118,9 @@ export default {
           this.address = results.logradouro;
           this.city = results.localidade;
           this.state = results.uf;
-        })
+        }).catch((error) => {
+ this.$myFunctions.notifyError(this, error, "Não foi possível buscar o CEP");
+ })
       }
     }
   },
@@ -174,7 +175,7 @@ export default {
         }).catch((error) => {
           self.loading = false;
 
-          const msg = error.response?.data?.message || error.response?.data || "Ocorreu um erro ao criar a empresa.";
+          const msg = self.$myFunctions.errorMessage(error, "Ocorreu um erro ao criar a empresa.");
           self.$myFunctions.showFeedbackModal(self, "Erro na criação", msg, "error");
         });
     }
@@ -188,3 +189,7 @@ form {
   margin-top: var(--space-6);
 }
 </style>
+
+<script setup>
+definePageMeta({ layout: 'login', access: 'user', title: 'Criar empresa' })
+</script>

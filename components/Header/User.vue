@@ -1,26 +1,29 @@
 <template>
     <div class="header-user">
-        <div class="user-container flex items-center" v-on:click="toggleDropdown()">
-            <img :src="$global.user.url_photo || defaultUserImage" alt="Imagem usuário" class="avatar avatar-pp">
-            <div class="informacoes-usuario">
-                <p class="fontsize-md preto">{{ $global.user.name }}</p>
-            </div>
-            <font-awesome icon="angle-down" class="dropdown-button cinza" :class="dropdownOpened ? 'rotated' : ''" />
-        </div>
+        <button type="button" class="user-container flex items-center" aria-haspopup="menu"
+            :aria-expanded="dropdownOpened ? 'true' : 'false'" aria-controls="user-menu" aria-label="Menu do usuário"
+            v-on:click="toggleDropdown()" v-on:keydown.esc="closeDropdown()">
+            <img :src="$global.user.url_photo || defaultUserImage" alt="" class="avatar avatar-pp">
+            <span class="informacoes-usuario">
+                <span class="fontsize-md preto">{{ $global.user.name }}</span>
+            </span>
+            <font-awesome icon="angle-down" class="dropdown-button cinza" aria-hidden="true"
+                :class="dropdownOpened ? 'rotated' : ''" />
+        </button>
         <transition name="fade">
-            <div v-if="dropdownOpened" class="user-dropdown">
+            <div v-if="dropdownOpened" id="user-menu" class="user-dropdown" role="menu" v-on:keydown.esc="closeDropdown()">
                 <ul>
-                <li v-on:click="toggleDropdown()">
-                    <nuxt-link to="/perfil">
+                <li role="none" v-on:click="toggleDropdown()">
+                    <nuxt-link to="/perfil" role="menuitem">
                         Meu perfil
                     </nuxt-link>
                 </li>
-                <li v-on:click="changeCompany()">Trocar de empresa</li>
-                <li v-on:click="logout()">Sair</li>
+                <li role="none"><button type="button" role="menuitem" v-on:click="changeCompany()">Trocar de empresa</button></li>
+                <li role="none"><button type="button" role="menuitem" v-on:click="logout()">Sair</button></li>
                 </ul>
             </div>
         </transition>   
-        <div class="dropdown-wrapper" v-show="dropdownOpened" v-on:click="toggleDropdown()"></div>
+        <div class="dropdown-wrapper" v-show="dropdownOpened" aria-hidden="true" v-on:click="closeDropdown()"></div>
     </div>
 </template>
 <script>
@@ -40,7 +43,11 @@ export default {
         toggleDropdown: function () {
             this.dropdownOpened = !this.dropdownOpened;
         },
+        closeDropdown: function () {
+            this.dropdownOpened = false;
+        },
         changeCompany: function () {
+            this.closeDropdown();
             this.$router.push("/trocar-empresa");
         }
     }
@@ -70,9 +77,28 @@ export default {
     white-space: nowrap;
 }
 
+.user-container {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
 li {
     padding: var(--space-3) var(--space-6);
     transition: background 0.4s;
+}
+
+li button {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
 }
 
     li:hover {

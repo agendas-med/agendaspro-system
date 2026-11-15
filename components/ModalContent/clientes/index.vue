@@ -6,8 +6,8 @@
                 <input type="text" id="name" required v-model="customer.name">
             </div>
             <div class="input-group">
-                <label for="cpf">CPF</label>
-                <input type="text" id="cpf" required v-model="customer.cpf"
+                <label for="cpf">CPF <span class="optional">(opcional)</span></label>
+                <input type="text" id="cpf" v-model="customer.cpf" inputmode="numeric" autocomplete="off"
                     @input="$myFunctions.formatCpfInput($event, customer.cpf)">
             </div>
             <div class="input-group">
@@ -15,8 +15,8 @@
                 <input type="email" id="email" v-model="customer.email" placeholder="cliente@email.com">
             </div>
             <div class="input-group">
-                <label for="birthday">Data de nascimento</label>
-                <input type="date" id="birthday" required v-model="customer.birthday">
+                <label for="birthday">Data de nascimento <span class="optional">(opcional)</span></label>
+                <input type="date" id="birthday" v-model="customer.birthday">
             </div>
             <div class="input-group">
                 <label for="tel">Telefone</label>
@@ -24,10 +24,10 @@
                     @input="$myFunctions.formatTelInput($event, customer.tel)">
             </div>
             <div class="input-group">
-                <label>Foto de perfil</label>
+                <label for="customer-photo">Foto de perfil</label>
                 <div class="flex items-center mt-2">
-                    <img :src="customer.image != undefined ? customer.image : defaultUserImage" class="avatar avatar-g">
-                    <input type="file" @change="onFileChange" accept="image/*">
+                    <img :src="customer.image != undefined ? customer.image : defaultUserImage" class="avatar avatar-g" alt="">
+                    <input type="file" id="customer-photo" @change="onFileChange" accept="image/*">
                 </div>
             </div>
         </div>
@@ -69,9 +69,11 @@ export default {
                 }
             }
 
-            if (payload.cpf) {
-                payload.cpf = payload.cpf.replace(/\D/g, "");
-            }
+            // CPF e data de nascimento são opcionais: sem valor, cpf sai do payload e birthday vai null.
+            payload.cpf = payload.cpf ? String(payload.cpf).replace(/\D/g, "") : "";
+            if (!payload.cpf) delete payload.cpf;
+
+            if (!payload.birthday) payload.birthday = null;
 
             delete payload.last_appointment;
             delete payload.created_at;
@@ -85,7 +87,7 @@ export default {
                     })
                     .catch(function (error) {
                         self.$myFunctions.stopModalLoading(self);
-                        self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Ocorreu um erro ao atualizar o cliente.", "error");
+                        self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Ocorreu um erro ao atualizar o cliente."), "error");
                     });
             } else {
                 self.$base.api.post("/customers", payload) 
@@ -95,7 +97,7 @@ export default {
                     })
                     .catch(function (error) {
                         self.$myFunctions.stopModalLoading(self);
-                        self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Ocorreu um erro ao cadastrar o cliente.", "error");
+                        self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Ocorreu um erro ao cadastrar o cliente."), "error");
                     });
             }
         },

@@ -1,6 +1,7 @@
 <template>
     <section>
-        <UtilsDataTable :loaded="!loading" :dataTable="pagamentos" :rowsPerPage="7" table="cliente">
+        <UtilsDataTable :loaded="!loading" :dataTable="pagamentos" :rowsPerPage="7" table="cliente"
+            :error="loadError" emptyText="Nenhum pagamento encontrado." @retry="returnPayments">
             <template #column-cliente="{ item }">
                 <div class="flex items-center">
                     <img :src="item.customer_image" class="avatar avatar-pp" alt="">
@@ -32,6 +33,7 @@ export default {
             response: "",
             responseType: "",
             loading: true,
+            loadError: "",
             pagamentos: []
         }
     },
@@ -55,11 +57,15 @@ export default {
             }
         },
         returnPayments: function () { //Método para retornar os pagamentos
-            let self = this;
+            this.loadError = "";
 
-            this.$base.api.get("/financial").then(function(response){            
-                self.pagamentos = response.data.returnObj;
-                self.loading = false;
+            this.$base.api.get("/financial").then((response) => {
+                this.pagamentos = response.data.returnObj || [];
+            }).catch((error) => {
+                this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar os pagamentos");
+                this.$myFunctions.notifyError(this, error, "Não foi possível carregar os pagamentos");
+            }).then(() => {
+                this.loading = false;
             })
         }
     }
@@ -87,3 +93,7 @@ export default {
     } 
 }
 </style>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Pagamentos' })
+</script>

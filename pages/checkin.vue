@@ -1,10 +1,11 @@
 <template>
     <section>
         <UtilsPageheader title="Painel de Check-in" subtitle="Realize o check-in e check-out dos agendamentos do dia." />
-        <UtilsDataTable class="mt-10" :loaded="!loading" :dataTable="appointments" :rowsPerPage="7" :newButton="false" table="agendamento">
+        <UtilsDataTable class="mt-10" :loaded="!loading" :dataTable="appointments" :rowsPerPage="7" :newButton="false" table="agendamento"
+            :error="loadError" emptyText="Nenhum agendamento para hoje. Crie um na agenda para fazer o check-in." @retry="getAppointments">
             <template #column-cliente="{ item }">
                 <div class="flex items-center">
-                    <img :teste="item.image" :src="item.image == '' ? defaultUserImage : item.image" class="avatar avatar-pp">
+                    <img :src="item.image == '' ? defaultUserImage : item.image" class="avatar avatar-pp" alt="">
                     <div>
                         <p><strong>{{ item.customer_name }}</strong></p>
                     </div>
@@ -23,14 +24,14 @@
             </template>
             <template #column-ações="{ item }">
                 <div class="flex space-x-2">
-                    <button class="rounded-button" v-on:click="handleInitAppointment(item)" v-if="item.status == 'agendado'" title="Iniciar agendamento">
-                        <font-awesome icon="circle-play" class="azul" />
+                    <button type="button" class="rounded-button" v-on:click="handleInitAppointment(item)" v-if="item.status == 'agendado'" title="Iniciar agendamento" aria-label="Iniciar agendamento" :disabled="busyId === item.id">
+                        <font-awesome icon="circle-play" class="azul" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleStopAppointment(item)" v-if="item.status == 'iniciado'" title="Terminar agendamento">
-                        <font-awesome icon="circle-stop" class="verde" />
+                    <button type="button" class="rounded-button" v-on:click="handleStopAppointment(item)" v-if="item.status == 'iniciado'" title="Terminar agendamento" aria-label="Terminar agendamento" :disabled="busyId === item.id">
+                        <font-awesome icon="circle-stop" class="verde" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleCancelAppointment(item)" v-if="['agendado', 'pendente_pagamento'].includes(item.status)" title="Cancelar agendamento">
-                        <font-awesome icon="circle-xmark" class="vermelho" />
+                    <button type="button" class="rounded-button" v-on:click="handleCancelAppointment(item)" v-if="['agendado', 'pendente_pagamento'].includes(item.status)" title="Cancelar agendamento" aria-label="Cancelar agendamento" :disabled="busyId === item.id">
+                        <font-awesome icon="circle-xmark" class="vermelho" aria-hidden="true" />
                     </button>
                 </div>
             </template>
@@ -46,46 +47,67 @@ export default {
         return {  
             defaultUserImage: defaultUserImage,
             appointments: [],
-            loading: true
+            loading: true,
+            loadError: "",
+            busyId: null
         }
     },
     methods: {
         getAppointments: function () {
-            let self = this;
+            this.loadError = "";
 
-            self.$base.api.get("/appointments?today=true")
+            return this.$base.api.get("/appointments?today=true")
             .then((response) => {
-                self.appointments = response.data.returnObj;
-                self.loading = false;
+                this.appointments = response.data.returnObj || [];
             })
             .catch((error) => {
-                console.error("Erro ao buscar os agendamentos:", error);
+                this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar os agendamentos de hoje");
+                this.$myFunctions.notifyError(this, error, "Não foi possível carregar os agendamentos de hoje");
+            }).then(() => {
+                this.loading = false;
+            });
+        },
+        // Executa uma ação (init/stop/cancel) com bloqueio de clique duplo e aviso em caso de erro.
+        runAction: function (item, action, failMessage, successMessage) {
+            this.busyId = item.id;
+
+            return this.$base.api.post("/appointments/" + action + "/" + item.id)
+            .then(() => {
+                if (successMessage) this.$myFunctions.showToast(this, successMessage, "success");
+                return this.getAppointments();
+            })
+            .catch((error) => {
+                this.$myFunctions.notifyError(this, error, failMessage);
+            })
+            .then(() => {
+                this.busyId = null;
             });
         },
         handleInitAppointment: function (item) {
-            let self = this;
-
-            self.$base.api.post("/appointments/init/" + item.id).then(function () {            
-                self.getAppointments();
-            })
+            return this.runAction(item, "init", "Não foi possível iniciar o agendamento");
         },
         handleStopAppointment: function (item) {
-            let self = this;
-
-            self.$base.api.post("/appointments/stop/" + item.id).then(function () {            
-                self.getAppointments();
-            })
+            return this.runAction(item, "stop", "Não foi possível terminar o agendamento");
         },
-        handleCancelAppointment: function (item) {
-            let self = this;
+        handleCancelAppointment: async function (item) {
+            const confirmed = await this.$myFunctions.confirmDialog({
+                title: "Cancelar agendamento",
+                message: "Deseja cancelar o agendamento de " + item.customer_name + "?",
+                confirmLabel: "Cancelar agendamento",
+                cancelLabel: "Voltar",
+                danger: true
+            });
+            if (!confirmed) return;
 
-            self.$base.api.post("/appointments/cancel/" + item.id).then(function () {            
-                self.getAppointments();
-            })
+            return this.runAction(item, "cancel", "Não foi possível cancelar o agendamento", "Agendamento cancelado");
         }
     },
     mounted: function () {
         this.getAppointments();
     }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Check-in' })
 </script>

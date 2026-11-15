@@ -1,5 +1,5 @@
 <template>
-  <div class="datatable" :style="dataTable.length == 0 && loaded ? 'border: 1px solid var(--cinza-claro); margin-top: var(--space-3);' : ''">
+  <div class="datatable" :aria-busy="!loaded" :style="dataTable.length == 0 && loaded ? 'border: 1px solid var(--cinza-claro); margin-top: var(--space-3);' : ''">
     <div class="datatable-content">
       <!-- Search/Filter -->
       <div class="datatable-header flex items-center justify-between" v-if="loaded">
@@ -10,16 +10,20 @@
           :table="table"
            v-if="dataTable.length > 0"
         />
-        <button v-if="newButton" type="button" v-on:click="$emit('handleNew')" class="btn btn-primary" :class="loaded && dataTable.length > 0 ? '' : 'mt-4 mx-auto'">
-            <font-awesome icon="plus" />
+        <button v-if="newButton && !error" type="button" v-on:click="$emit('handleNew')" class="btn btn-primary" :class="loaded && dataTable.length > 0 ? '' : 'mt-4 mx-auto'">
+            <font-awesome icon="plus" aria-hidden="true" />
             {{ 
               newButtonText ? newButtonText : ("Cadastrar " + table)
             }}
         </button>
       </div>
 
-      <div class="empty-datatable text-center" v-if="dataTable.length == 0 && loaded">
-        <h2>Não existem informações para exibir</h2>
+      <div class="empty-datatable text-center" v-if="error && loaded" role="alert">
+        <h2>{{ error }}</h2>
+        <button type="button" class="btn btn-primary mt-4 mx-auto" v-on:click="$emit('retry')">Tentar novamente</button>
+      </div>
+      <div class="empty-datatable text-center" v-else-if="dataTable.length == 0 && loaded" role="status">
+        <h2>{{ emptyText || "Não existem informações para exibir" }}</h2>
       </div>
       <div class="datatable-loading">
         <UtilsLoading :loading="!loaded" />
@@ -33,6 +37,10 @@
               v-for="(column, index) in columnsToRender"
               :key="index"
               @click="sortData(column)"
+              @keydown.enter.prevent="sortData(column)"
+              @keydown.space.prevent="sortData(column)"
+              tabindex="0"
+              :aria-sort="sortColumn === column ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
               :class="column"
             >
               <span style="text-transform: capitalize;">{{ column.replace(/-/g, " ") }}</span>
@@ -58,16 +66,16 @@
   
       <!-- Pagination -->
       <div class="pagination" v-if="loaded && dataTable.length > 0">
-        <button @click="prevPage" class="btn rounded-btn small" :disabled="currentPage === 1">
-          <font-awesome icon="backward-step" class="cinza" />
+        <button type="button" @click="prevPage" class="btn rounded-btn small" :disabled="currentPage === 1" aria-label="Página anterior">
+          <font-awesome icon="backward-step" class="cinza" aria-hidden="true" />
         </button>
         <div class="datatable-informations">
           <span>Página <strong>{{ currentPage }}</strong> de {{ totalPages }}</span>
           <span v-if="totalPages > 1">Mostrando <strong>{{ rowsPerPage }}</strong> de {{ dataTable.length }} {{ dataTable.length > 1 ? "itens" : "item" }}</span>
         </div>
         
-        <button @click="nextPage" class="btn rounded-btn small" :disabled="currentPage === totalPages">
-          <font-awesome icon="forward-step" class="cinza" />
+        <button type="button" @click="nextPage" class="btn rounded-btn small" :disabled="currentPage === totalPages" aria-label="Próxima página">
+          <font-awesome icon="forward-step" class="cinza" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -77,8 +85,18 @@
 <script>
 
 export default {
-  emits: ["handleNew"],
+  emits: ["handleNew", "retry"],
   props: {
+    // Mensagem de erro de carregamento (mostra estado de erro com "Tentar novamente").
+    error: {
+      type: String,
+      default: ""
+    },
+    // Texto do estado vazio (o botão de cadastro funciona como CTA).
+    emptyText: {
+      type: String,
+      default: ""
+    },
     dataTable: {
       type: Array,
       required: true
@@ -269,6 +287,7 @@ export default {
 
 .table th {
   cursor: pointer;
+  user-select: none;
   font-size: var(--fontsize-sm);
   color: var(--cinza);
   font-weight: 500;

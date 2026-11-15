@@ -3,11 +3,12 @@
         <UtilsPageheader title="Clientes" subtitle="Veja todas as informações dos seus clientes" />
         <UtilsTabs :tabs="tabs" @changedTab="changeCustomers($event)" />
         <UtilsDataTable :loaded="!loading" :dataTable="filteredClientes" :rowsPerPage="7" :newButton="true"
-            @handleNew="newCustomer" table="cliente">
+            :error="loadError" emptyText="Você ainda não tem clientes. Cadastre o primeiro para começar a agendar."
+            @retry="returnCustomers" @handleNew="newCustomer" table="cliente">
             <template #column-cliente="{ item }">
                 <div class="flex items-center">
-                    <img :teste="item.image" :src="item.image == '' ? defaultUserImage : item.image"
-                        class="avatar avatar-pp">
+                    <img :src="item.image == '' ? defaultUserImage : item.image"
+                        class="avatar avatar-pp" alt="">
                     <div>
                         <p><strong>{{ item.name }}</strong></p>
                     </div>
@@ -24,23 +25,23 @@
             </template>
             <template #column-ações="{ item }">
                 <div class="flex space-x-2">
-                    <button class="rounded-button" v-on:click="handleCreateSchedule(item)">
-                        <font-awesome icon="calendar-day" class="cinza" />
+                    <button type="button" class="rounded-button" :aria-label="'Criar agendamento para ' + item.name" :title="'Criar agendamento para ' + item.name" v-on:click="handleCreateSchedule(item)">
+                        <font-awesome icon="calendar-day" class="cinza" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleDeleteCustomer(item)">
-                        <font-awesome icon="trash" class="vermelho" />
+                    <button type="button" class="rounded-button" :aria-label="'Excluir cliente ' + item.name" :title="'Excluir cliente ' + item.name" v-on:click="handleDeleteCustomer(item)">
+                        <font-awesome icon="trash" class="vermelho" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleEditCustomer(item)">
-                        <font-awesome icon="user-pen" class="cinza" />
+                    <button type="button" class="rounded-button" :aria-label="'Editar cliente ' + item.name" :title="'Editar cliente ' + item.name" v-on:click="handleEditCustomer(item)">
+                        <font-awesome icon="user-pen" class="cinza" aria-hidden="true" />
                     </button>
                 </div>
             </template>
         </UtilsDataTable>
-        <UtilsModal excludepath="/customers/" @closeModal="$myFunctions.closeModal(this); returnCustomers()">
+        <UtilsModal excludepath="/customers/" @closeModal="$myFunctions.closeModal($.proxy); returnCustomers()">
             <ModalContentAgenda v-if="modalContentAgenda" :event="selectedEvent"
-                @savedContent="$myFunctions.closeModal(this, [], true); goToSchedule()" />
+                @savedContent="$myFunctions.closeModal($.proxy, [], true); goToSchedule()" />
             <ModalContentClientes v-if="modalContentClientes"
-                @savedContent="$myFunctions.closeModal(this, []); returnCustomers()" />
+                @savedContent="$myFunctions.closeModal($.proxy, []); returnCustomers()" />
         </UtilsModal>
     </section>
 </template>
@@ -70,6 +71,7 @@ export default {
                 }
             ],
             loading: true,
+            loadError: "",
             modalContentAgenda: false,
             modalContentClientes: false,
             clientes: [],
@@ -96,12 +98,16 @@ export default {
             }
         },
         returnCustomers: function () {
-            let self = this;
+            this.loadError = "";
 
-            this.$base.api.get("/customers").then(function (response) {
-                self.clientes = response.data.returnObj;
-                self.filteredClientes = response.data.returnObj;
-                self.loading = false;
+            this.$base.api.get("/customers").then((response) => {
+                this.clientes = response.data.returnObj || [];
+                this.filteredClientes = this.clientes;
+            }).catch((error) => {
+                this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar os clientes");
+                this.$myFunctions.notifyError(this, error, "Não foi possível carregar os clientes");
+            }).then(() => {
+                this.loading = false;
             })
         },
         handleCreateSchedule: function (user) {
@@ -173,3 +179,7 @@ export default {
     max-width: 100%;
 }
 </style>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Clientes' })
+</script>

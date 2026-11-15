@@ -2,17 +2,19 @@
   <UtilsPageheader title="Agenda" subtitle="Organize seus horários e acompanhe seus agendamentos." />
   <div class="calendar-container">
     <div class="calendar-header flex justify-between">
-      <div class="input-selecao-periodo" :style="responsive ? 'opacity: 0;' : ''">
-        <span v-on:click="changePeriod(1)">Mensal</span>
-        <span v-on:click="changePeriod(2)">Semanal</span>
-        <div class="frame-botao"></div>
+      <div class="input-selecao-periodo" :style="responsive ? 'visibility: hidden;' : ''" :data-index="periodIndex"
+        role="group" aria-label="Visualização da agenda">
+        <button type="button" v-for="(period, index) in periods" :key="period.view" :aria-pressed="calendarType === period.view"
+          :class="{ active: calendarType === period.view }" v-on:click="changePeriod(index)">{{ period.label }}</button>
+        <div class="frame-botao" aria-hidden="true"></div>
       </div>
       <div class="navigation-buttons flex gap-1">
-        <button class="btn btn-primary btn-square" v-on:click="calendarApi.prev()" title="Anterior">
-          <font-awesome icon="angle-left" />
+        <button type="button" class="btn btn-primary" v-on:click="goToday()" title="Ir para hoje">Hoje</button>
+        <button type="button" class="btn btn-primary btn-square" v-on:click="goPrev()" title="Anterior" aria-label="Período anterior">
+          <font-awesome icon="angle-left" aria-hidden="true" />
         </button>
-        <button class="btn btn-primary btn-square" v-on:click="calendarApi.next()" title="Próximo">
-          <font-awesome icon="angle-right" />
+        <button type="button" class="btn btn-primary btn-square" v-on:click="goNext()" title="Próximo" aria-label="Próximo período">
+          <font-awesome icon="angle-right" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -24,8 +26,8 @@
       <div class="cancelado">Cancelado</div>
     </div>
     <FullCalendar ref="fullCalendar" :options="calendarOptions" v-if="!reload" />
-    <UtilsModal @closeModal="$myFunctions.closeModal(this, ['eventId'])">
-      <ModalContentAgenda :event="selectedEvent" @savedContent="$myFunctions.closeModal(this); getEvents();" />
+    <UtilsModal @closeModal="$myFunctions.closeModal($.proxy, ['eventId'])">
+      <ModalContentAgenda :event="selectedEvent" @savedContent="$myFunctions.closeModal($.proxy); getEvents(true);" />
     </UtilsModal>
   </div>
 
@@ -38,6 +40,13 @@ import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import ptLocale from '@fullcalendar/core/locales/pt-br';
+import { toBusinessHours } from '../utils/format.js';
+
+const PERIODS = [
+  { view: "dayGridMonth", label: "Mensal" },
+  { view: "timeGridWeek", label: "Semanal" },
+  { view: "timeGridDay", label: "Diário" }
+];
 
 export default {
   components: {
@@ -45,10 +54,15 @@ export default {
   },
   data() {
     return {
+      periods: PERIODS,
       calendarType: "dayGridMonth",
       reload: false,
       calendarApi: null,
       calendarEvents: [],
+      rawEvents: [],
+      range: null,
+      lastRangeKey: "",
+      requestSeq: 0,
       draggingEventId: "",
       eventId: "",
       responsive: false,
@@ -63,13 +77,26 @@ export default {
     }
   },
   computed: {
+    periodIndex: function () {
+      const index = PERIODS.findIndex((period) => period.view === this.calendarType);
+      return index < 0 ? 0 : index;
+    },
+    businessHours: function () {
+      const company = this.$global && this.$global.company;
+      const hours = company && company.id ? toBusinessHours(company.configurations && company.configurations.opening_hours) : [];
+
+      // false = sem faixa destacada (empresa sem horário de funcionamento configurado).
+      return hours.length ? hours : false;
+    },
     calendarOptions: function () {
       return {
         plugins: [dayGridPlugin, interactionPlugin, timeGridPlugin, momentTimezonePlugin, listPlugin],
         locale: ptLocale,
         initialView: this.calendarType,
+        initialDate: this._focusDate || undefined,
         dateClick: this.handleDateClick,
         viewDidMount: this.getApi,
+        datesSet: this.handleDatesSet,
         events: this.calendarEvents,
         nowIndicator: true,
         dayMaxEventRows: true,
@@ -79,6 +106,8 @@ export default {
         editable: true,
         eventDrop: this.handleEventDrop,
         eventResize: this.handleEventResize,
+        businessHours: this.businessHours,
+        scrollTime: "07:00:00",
         titleFormat: {
           hour12: false,
           omitZeroMinute: false,
@@ -95,42 +124,79 @@ export default {
     }
   },
   mounted: function () {
-    this.getEvents();
+    // Só recria o calendário no boot se for tela pequena (visão em lista); caso contrário usa o padrão.
+    if (window.innerWidth < 480) this.resizeCalendar(true);
 
-    this.$nextTick(() => {
-      this.resizeCalendar();
-    });
-
-    $(window).on("resize", () => {
-      this.resizeCalendar();
-    })
+    window.addEventListener("resize", this.resizeCalendar);
+  },
+  beforeUnmount: function () {
+    window.removeEventListener("resize", this.resizeCalendar);
   },
   methods: {
-    getEvents: function () {
-      this.$base.api.get("/appointments")
+    goToday: function () {
+      if (this.calendarApi) this.calendarApi.today();
+    },
+    goPrev: function () {
+      if (this.calendarApi) this.calendarApi.prev();
+    },
+    goNext: function () {
+      if (this.calendarApi) this.calendarApi.next();
+    },
+    // Disparado pelo FullCalendar a cada mudança do intervalo visível (inclusive na montagem).
+    handleDatesSet: function (info) {
+      this.range = { start: info.startStr, end: info.endStr };
+      this.getEvents();
+    },
+    // Busca só o intervalo visível. Com `force` ignora a chave do último intervalo carregado.
+    getEvents: function (force = false) {
+      if (!this.range) return Promise.resolve();
+
+      const key = this.range.start + "|" + this.range.end;
+      if (!force && key === this.lastRangeKey) return Promise.resolve();
+
+      this.lastRangeKey = key;
+      const seq = ++this.requestSeq;
+      const range = this.range;
+
+      // O core atual ignora start/end e devolve tudo; o filtro abaixo garante o mesmo resultado nos dois casos.
+      return this.$base.api.get("/appointments", { params: { start: range.start, end: range.end } })
         .then((response) => {
-          this.calendarEvents = response.data.returnObj;
+          if (seq !== this.requestSeq) return; // resposta de um intervalo antigo
 
-          for (let i = 0; i < this.calendarEvents.length; i++) {
-            this.calendarEvents[i]["displayEventEnd"] = true;
-
-            let statusColor = "var(--verde)";
-            if (this.calendarEvents[i].status === "pendente_pagamento") {
-              statusColor = "#f97316";
-            } else if (this.calendarEvents[i].status === "agendado") {
-              statusColor = "var(--amarelo)";
-            } else if (this.calendarEvents[i].status === "iniciado") {
-              statusColor = "var(--azul)";
-            } else if (this.calendarEvents[i].status === "cancelado") {
-              statusColor = "var(--vermelho)";
-            }
-
-            this.calendarEvents[i]["color"] = statusColor;
-          }
+          this.rawEvents = response.data.returnObj || [];
+          this.calendarEvents = this.rawEvents
+            .filter((event) => this.overlapsRange(event, range))
+            .map((event) => this.decorateEvent(event));
         })
         .catch((error) => {
-          console.error("Erro ao buscar os agendamentos:", error);
+          if (seq === this.requestSeq) this.lastRangeKey = ""; // permite tentar de novo
+          this.$myFunctions.notifyError(this, error, "Não foi possível carregar os agendamentos");
         });
+    },
+    overlapsRange: function (event, range) {
+      const start = moment(event.start || event.date);
+      if (!start.isValid()) return true;
+
+      const end = event.end && moment(event.end).isValid() ? moment(event.end) : start.clone();
+
+      return start.isBefore(moment(range.end)) && end.isSameOrAfter(moment(range.start));
+    },
+    decorateEvent: function (event) {
+      let statusColor = "var(--verde)";
+      if (event.status === "pendente_pagamento") {
+        statusColor = "#f97316";
+      } else if (event.status === "agendado") {
+        statusColor = "var(--amarelo)";
+      } else if (event.status === "iniciado") {
+        statusColor = "var(--azul)";
+      } else if (event.status === "cancelado") {
+        statusColor = "var(--vermelho)";
+      }
+
+      event["displayEventEnd"] = true;
+      event["color"] = statusColor;
+
+      return event;
     },
     eventClick: function (info) {
       this.selectedEvent = this.calendarEvents.filter(event => event.id == info.event.id)[0];
@@ -145,23 +211,35 @@ export default {
         contentObject: this.selectedEvent
       });
     },
-    handleEventResize: function (info) {
-      if (!confirm("Tem certeza que deseja alterar o agendamento?")) {
+    confirmChange: function () {
+      return this.$myFunctions.confirmDialog({
+        title: "Alterar agendamento",
+        message: "Tem certeza que deseja alterar o agendamento?",
+        confirmLabel: "Alterar",
+        cancelLabel: "Cancelar"
+      });
+    },
+    handleEventResize: async function (info) {
+      if (!(await this.confirmChange())) {
         info.revert();
       } else {
         this.changeEventById(info.event.id, info);
       }
     },
-    handleEventDrop: function (info) {
-      if (!confirm("Tem certeza que deseja alterar o agendamento?")) {
+    handleEventDrop: async function (info) {
+      if (!(await this.confirmChange())) {
         info.revert();
       } else {
         this.changeEventById(info.event.id, info);
-
       }
     },
     changeEventById: function (eventId, info) {
       let event = this.calendarEvents.find(event => event.id == eventId);
+
+      if (!event) {
+        info.revert();
+        return;
+      }
 
       event.start = info.event.startStr;
       event.end = info.event.endStr;
@@ -176,7 +254,7 @@ export default {
       const calculatedDuration = end.diff(start, "minutes");
 
       // Soma das durations dos serviços
-      const totalServiceDuration = event.services.reduce((total, service) => {
+      const totalServiceDuration = (event.services || []).reduce((total, service) => {
         return total + parseInt(service.duration || 0);
       }, 0);
 
@@ -203,31 +281,31 @@ export default {
 
       this.$base.api.patch(`/appointments/${event.id}`, updatedEvent)
         .then(() => {
-          this.getEvents(); // Atualiza a lista de eventos
+          this.$myFunctions.showToast(this, "Agendamento atualizado", "success");
+          return this.getEvents(true); // Atualiza a lista de eventos
         })
         .catch((error) => {
-          console.error("Erro ao atualizar o agendamento:", error);
+          this.$myFunctions.notifyError(this, error, "Não foi possível atualizar o agendamento");
+          // Volta o calendário para o que está salvo no servidor.
+          return this.getEvents(true);
         });
     },
     getApi: function () {
       this.calendarApi = this.$refs.fullCalendar.getApi()
     },
     handleDateClick: function (e) {
-      let filteredEvents = [];
+      // Visão mensal traz só a data; visões com horário trazem data e hora (usa a hora clicada).
+      const date = e.allDay || e.dateStr.length <= 10
+        ? e.dateStr.slice(0, 10) + "T09:00:00"
+        : e.dateStr.slice(0, 19);
 
       this.selectedEvent = {
         customer_id: null,
         customer_name: "",
         services: [],
-        date: e.dateStr + "T09:00:00",
+        date: date,
         duration: "",
         observations: ""
-      }
-
-      for (let i = 0; i < this.calendarEvents.length; i++) {
-        if (this.isSameDay(this.calendarEvents[i].start, e.date)) {
-          filteredEvents.push(this.calendarEvents[i]);
-        }
       }
 
       this.$myFunctions.openModal({
@@ -247,10 +325,16 @@ export default {
         inputDate.getDate() === dateObj.getDate()
       );
     },
-    resizeCalendar: function () {
-      this.reload = true;
+    // Recria o calendário só quando muda entre telas pequenas (lista) e grandes, não a cada evento de resize.
+    resizeCalendar: function (force = false) {
+      const small = window.innerWidth < 480;
 
-      if (window.innerWidth < 480) {
+      if (force !== true && small === this.responsive) return;
+
+      this.reload = true;
+      this._focusDate = this.calendarApi ? this.calendarApi.getDate() : this._focusDate;
+
+      if (small) {
         this.calendarType = "listWeek";
         this.responsive = true;
       } else {
@@ -263,19 +347,12 @@ export default {
       });
     },
     changePeriod: function (position) {
-      let frame = $(".input-selecao-periodo .frame-botao");
-      this.reload = true;
+      const period = PERIODS[position];
+      if (!period || period.view === this.calendarType) return;
 
-      switch (position) {
-        case 1:
-          this.calendarType = "dayGridMonth";
-          frame.css("transform", "translateX(0)").css("width", "86px");
-          break;
-        case 2:
-          this.calendarType = "timeGridWeek";
-          frame.css("transform", "translateX(83px)").css("width", "91px");
-          break;
-      }
+      this._focusDate = this.calendarApi ? this.calendarApi.getDate() : this._focusDate;
+      this.reload = true;
+      this.calendarType = period.view;
 
       this.$nextTick(() => {
         this.reload = false;
@@ -332,7 +409,7 @@ export default {
 }
 
 .pendente::after {
-  background: #f97316; 
+  background: #f97316;
 }
 
 .agendado::after {
@@ -356,29 +433,49 @@ export default {
 }
 
 .input-selecao-periodo {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
   background: var(--cinza-medio);
   padding: var(--space-3) 3px;
   border-radius: 30px;
   position: relative;
-  width: 179px;
+  width: 270px;
 }
 
-.input-selecao-periodo span {
+.input-selecao-periodo button {
   font-weight: 500;
-  margin: 0 var(--space-5);
   cursor: pointer;
   z-index: 2;
+  background: none;
+  border: none;
+  text-align: center;
+  padding: 0;
 }
 
 .input-selecao-periodo .frame-botao {
   position: absolute;
+  top: 5%;
+  left: 3px;
   background: var(--branco);
-  width: 86px;
+  width: calc((100% - 6px) / 3);
   height: 90%;
   border-radius: 30px;
-  transition: all 0.4s;
+  transition: transform 0.4s;
+  z-index: 1;
+}
+
+.input-selecao-periodo[data-index="1"] .frame-botao {
+  transform: translateX(100%);
+}
+
+.input-selecao-periodo[data-index="2"] .frame-botao {
+  transform: translateX(200%);
+}
+
+.navigation-buttons .btn:not(.btn-square) {
+  width: auto;
+  padding: 0 var(--space-5);
 }
 
 @media (max-width: 768px) {
@@ -388,3 +485,7 @@ export default {
   }
 }
 </style>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Agenda' })
+</script>

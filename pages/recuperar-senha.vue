@@ -11,14 +11,13 @@
             <input type="email" v-model="email" id="email" required>
           </div>
         </div>
-        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="loading" @eraseError="$myFunctions.resetResponse(this)" />
+        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="loading" @eraseError="$myFunctions.resetResponse($.proxy)" />
         <button type="submit" class="btn btn-primary">Enviar email de recuperação</button>
       </form>
     </div>
   </template>
   <script>
   export default {
-    layout: 'entrar',
     data() {
       return {
         email: "",
@@ -45,3 +44,7 @@
     }
   }
   </script>
+
+<script setup>
+definePageMeta({ layout: 'login', access: 'public', title: 'Recuperar senha' })
+</script>

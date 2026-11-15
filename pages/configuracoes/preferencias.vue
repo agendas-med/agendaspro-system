@@ -10,7 +10,7 @@
             >
         </div>
         <button type="button" class="btn btn-primary mt-10" v-on:click="savePreferences()">Salvar</button>
-        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="false" @eraseError="$myFunctions.resetResponse(this)" />
+        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="false" @eraseError="$myFunctions.resetResponse($.proxy)" />
     </section>   
 </template>
 
@@ -34,7 +34,7 @@ export default {
             .then(function(response){      
                 self.preferences = response.data.returnObj;
             }).catch((error) => {
-                self.$myFunctions.setResponse(self, error.response.data, "error");
+                self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Ocorreu um erro. Tente novamente."), "error");
             }).then(() => {
                 self.loading = false;
             })
@@ -49,7 +49,7 @@ export default {
                 self.$myFunctions.setResponse(self, response.data.message, "success");
                 self.getPreferences();
             }).catch((error) => {
-                self.$myFunctions.setResponse(self, error.response.data, "error");
+                self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Ocorreu um erro. Tente novamente."), "error");
             }).then(() => {
                 self.loading = false;
             })
@@ -59,4 +59,8 @@ export default {
         this.getPreferences();
     }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Preferências' })
 </script>

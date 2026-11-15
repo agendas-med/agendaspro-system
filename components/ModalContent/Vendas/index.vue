@@ -342,7 +342,7 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", "Pagamento registrado com sucesso!", "success");
                 }
             }).catch((error) => {
-                self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao processar o pagamento.", "error");
+                self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Erro ao processar o pagamento."), "error");
             }).finally(() => { self.paymentLoading = false; });
         },
         iniciarPollingDePagamento() {
@@ -400,7 +400,7 @@ export default {
                     self.showPaymentModal = false;
                 }).catch(error => {
                     self.iniciarPollingDePagamento();
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Não foi possível cancelar o Pix.", "error");
+                    self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Não foi possível cancelar o Pix."), "error");
                 });
             } else {
                 self.pixData = null;
@@ -450,7 +450,7 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", "Venda atualizada com sucesso.", "success");
                 }).catch((error) => {
                     self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao atualizar venda.", "error");
+                    self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Erro ao atualizar venda."), "error");
                 });
             } else {
                 self.$base.api.post("/sales", sale).then(function () {
@@ -459,7 +459,7 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", "Venda registrada com sucesso.", "success");
                 }).catch((error) => {
                     self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Erro ao registrar venda.", "error");
+                    self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Erro ao registrar venda."), "error");
                 });
             }
         }

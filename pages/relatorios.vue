@@ -4,17 +4,21 @@
         <UtilsTabs :tabs="tabs" @changedTab="changeChart($event)" />
         <div>
             <div class="filter">
-                <select v-model="dateRange">
+                <select v-model="dateRange" aria-label="Período do relatório">
                     <option value="anual">Anual</option>
                     <option value="semanal">Semanal</option>
                 </select>
-                <input v-if="dateRange === 'anual'" type="number" v-model="year" @keydown.enter="updateChartRange" placeholder="Ano" />
-                <input v-if="dateRange === 'semanal'" type="week" v-model="week" placeholder="Semana" />
+                <input v-if="dateRange === 'anual'" aria-label="Ano" type="number" v-model="year" @keydown.enter="updateChartRange" placeholder="Ano" />
+                <input v-if="dateRange === 'semanal'" aria-label="Semana" type="week" v-model="week" placeholder="Semana" />
                 <button type="button" class="btn btn-primary" v-if="year != null || week != null" v-on:click="updateChartRange">Buscar</button>
             </div>
             <div class="chart-container">
                 <UtilsLoading :loading="loading" />
-                <Chart v-if="!loading" :chartData="data.chartData" :chartType="data.type" :chartTitle="data.title" :type="data.labelType" />
+                <Chart v-if="!loading && !loadError && data.chartData" :chartData="data.chartData" :chartType="data.type" :chartTitle="data.title" :type="data.labelType" />
+                <div v-else-if="!loading" class="empty-state" role="status">
+                    <p class="fontsize-md cinza">{{ loadError ? 'Não foi possível carregar o relatório.' : 'Sem dados para o período selecionado.' }}</p>
+                    <button type="button" class="btn btn-primary mt-4" v-on:click="updateChartRange">Tentar novamente</button>
+                </div>
             </div>
         </div>
     </section>
@@ -36,6 +40,7 @@ export default {
                 }
             ],
             loading: true,
+            loadError: false,
             data: {},
             dateRange: "anual", 
             year: new Date().getFullYear(),
@@ -91,10 +96,13 @@ export default {
                         type: "bar",
                         title: "Faturamento",
                         labelType: "currency"
-                    }            
-                    self.loading = false;
+                    }
+                    self.loadError = false;
                 }).catch((error) => {
-                    console.log(error)
+                    self.loadError = true;
+                    self.$myFunctions.notifyError(self, error, "Não foi possível carregar o relatório de faturamento");
+                }).then(() => {
+                    self.loading = false;
                 })
             } else {
                 self.$base.api.post("/reports/appointments", data) 
@@ -104,10 +112,13 @@ export default {
                         type: "line",
                         title: "Atendimentos realizados",
                         labelType: "number"
-                    }            
-                    self.loading = false;
+                    }
+                    self.loadError = false;
                 }).catch((error) => {
-                    console.log(error)
+                    self.loadError = true;
+                    self.$myFunctions.notifyError(self, error, "Não foi possível carregar o relatório de atendimentos");
+                }).then(() => {
+                    self.loading = false;
                 })
             }
         },
@@ -115,10 +126,9 @@ export default {
             this.returnChart(this.type, this.dateRange);
         }
     },
-    mounted: function () {
-        if (!this.$myFunctions.hasPermission(this)) {
-            this.$router.push("/entrar");
-        }
-    }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Relatórios' })
 </script>

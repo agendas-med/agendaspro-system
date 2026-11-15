@@ -1,7 +1,7 @@
 <template>
     <section>
         <UtilsPageheader title="Configurações" subtitle="Personalize e configure o sistema de acordo com suas necessidades." />
-        <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute(this, $event, 'configuracoes', tabs)" />
+        <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'configuracoes', tabs)" />
         <NuxtPage/>
     </section>
 </template>
@@ -47,13 +47,12 @@ export default {
                     route: "preferencias",
                     default: false
                 }
-            ]       
-        }
-    },
-    mounted: function () {
-        if (!this.$myFunctions.hasPermission(this)) {
-            this.$router.push("/entrar");
+            ]
         }
     }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Configurações' })
 </script>

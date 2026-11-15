@@ -1,11 +1,14 @@
 <template>
-    <div class="system-tabs flex items-center flex-wrap">
-        <div class="tab cinza fontsize-md" v-for="(tab, index) in tabs" :class="tabActive == index ? 'active' : ''" v-on:click="selectTab(index)" ref="tabs">
-            <div class="tab-inner flex items-center">
-                <p>{{ tab.name }}</p>
-                <div class="tab-number fontsize-sm" v-if="tab.quantity != null">{{ tab.quantity }}</div>
-            </div>
-        </div>
+    <div class="system-tabs flex items-center flex-wrap" role="tablist" @keydown.right.prevent="moveTab(1)"
+        @keydown.left.prevent="moveTab(-1)">
+        <button type="button" role="tab" class="tab cinza fontsize-md" v-for="(tab, index) in tabs" :key="tab.name"
+            :class="tabActive == index ? 'active' : ''" :aria-selected="tabActive == index ? 'true' : 'false'"
+            :tabindex="tabActive == index ? 0 : -1" v-on:click="selectTab(index)" ref="tabs">
+            <span class="tab-inner flex items-center">
+                <span>{{ tab.name }}</span>
+                <span class="tab-number fontsize-sm" v-if="tab.quantity != null">{{ tab.quantity }}</span>
+            </span>
+        </button>
         <div class="tabs-indicator" :style="indicatorStyle"></div>
     </div>
 </template>
@@ -27,6 +30,16 @@ export default {
             this.tabActive = index;
             this.updateIndicator();
             this.$emit("changedTab", index);
+        },
+        moveTab(step) {
+            const total = this.tabs.length;
+            if (!total) return;
+            const next = (this.tabActive + step + total) % total;
+            this.selectTab(next);
+            this.$nextTick(() => {
+                const el = this.$refs.tabs && this.$refs.tabs[next];
+                if (el) el.focus();
+            });
         },
         updateIndicator() {
             this.$nextTick(() => {
@@ -68,6 +81,10 @@ export default {
 }
 
 .tab {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    font: inherit;
     margin-right: var(--space-6);
     cursor: pointer;
     padding-bottom: var(--space-4);

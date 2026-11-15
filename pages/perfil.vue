@@ -39,7 +39,7 @@
                         </select>
                     </div>
                     <UtilsLoadingResponse :msg="response" :type="responseType" :loading="loading"
-                        @eraseError="$myFunctions.resetResponse(this)" />
+                        @eraseError="$myFunctions.resetResponse($.proxy)" />
                     <div class="input-group">
                         <button type="submit" class="btn btn-primary">Salvar</button>
                     </div>
@@ -50,7 +50,7 @@
                 <font-awesome icon="user-lock" />
                 Redefinir senha
             </button>
-            <UtilsModal @confirm="resetPassword()" @closeModal="$myFunctions.closeModal(this)"></UtilsModal>
+            <UtilsModal @confirm="resetPassword()" @closeModal="$myFunctions.closeModal($.proxy)"></UtilsModal>
         </div>
     </section>
 </template>
@@ -76,7 +76,9 @@ export default {
                     this.user.address = results.logradouro;
                     this.user.city = results.localidade;
                     this.user.state = results.uf;
-                })
+                }).catch((error) => {
+ this.$myFunctions.notifyError(this, error, "Não foi possível buscar o CEP");
+ })
             }
         }
     },
@@ -97,6 +99,9 @@ export default {
 
             this.$base.api.post("/users/request-reset-password", { email: self.$global.user.email }).then(function (response) {
                 self.$myFunctions.setResponse(self, response.data.message, "success");
+            }).catch((error) => {
+                self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Não foi possível solicitar a redefinição de senha"), "error");
+            }).then(() => {
                 self.loading = false;
             })
         },
@@ -117,11 +122,11 @@ export default {
             this.$base.api.post("/users/change-profile", data)
                 .then(function (response) {
                     self.$myFunctions.setResponse(self, response.data.message, "success");
-                }).catch(() => {
-                    self.$myFunctions.setResponse(self, "Ocorreu um erro ao salvar as informações", "error");
+                }).catch((error) => {
+                    self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Ocorreu um erro ao salvar as informações"), "error");
                 }).then(() => {
                     self.loading = false;
-                    self.$myFunctions.getUser();
+                    self.$myFunctions.getUser(self).catch(() => {});
                 })
         },
         handleResetPassword: function () {
@@ -151,3 +156,7 @@ export default {
     margin-right: var(--space-6);
 }
 </style>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Meu perfil' })
+</script>

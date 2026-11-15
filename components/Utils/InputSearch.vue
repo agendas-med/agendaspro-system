@@ -1,5 +1,5 @@
 <template>
-    <input type="text" class="input-search-with-icon" :placeholder="'Procure um ' + table" v-model="inputData">
+    <input type="text" :aria-label="'Procurar ' + table" class="input-search-with-icon" :placeholder="'Procure um ' + table" v-model="inputData">
 </template>
 <script>
 export default {

@@ -48,7 +48,7 @@ export default {
                     self.$myFunctions.showFeedbackModal(self, "Sucesso", response.data.message || "Cargo salvo com sucesso.", "success");
                 }).catch((error) => {
                     self.$myFunctions.stopModalLoading(self);
-                    self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Ocorreu um erro ao salvar cargo.", "error");
+                    self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Ocorreu um erro ao salvar cargo."), "error");
                 });
         }
     },

@@ -11,7 +11,6 @@
   
   <script>
   export default {
-    layout: 'empresa_entrar',
     data() {
       return {
         haveAccount: false,
@@ -46,7 +45,7 @@
           self.haveAccount = response.data.returnObj;
         }).catch((error) => {
           self.invalid = true;
-          self.$myFunctions.setResponse(self, error.response.data, "error");
+          self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Ocorreu um erro. Tente novamente."), "error");
         }).then(() => {
           self.loading = false;
         })
@@ -62,3 +61,7 @@
     }
   }
   </script>
+
+<script setup>
+definePageMeta({ layout: 'login', access: 'public', title: 'Convite' })
+</script>

@@ -50,7 +50,7 @@
                     v-for="(day, index) in company.configurations.opening_hours" />
                 <button type="submit" class="btn btn-primary mt-8">Salvar informações</button>
                 <UtilsLoadingResponse :msg="response" :type="responseType" :loading="false"
-                    @eraseError="$myFunctions.resetResponse(this)" />
+                    @eraseError="$myFunctions.resetResponse($.proxy)" />
             </form>
             <div v-if="isAdmin" class="mt-8 border border-red-500 rounded-lg p-6" style="background-color: #fef2f2;">
                 <h3 class="fontsize-lg-bold mb-2" style="color: #b91c1c;">Zona de Perigo</h3>
@@ -64,7 +64,7 @@
             </div>
         </div>
     </section>
-    <UtilsModal @closeModal="$myFunctions.closeModal(this)">
+    <UtilsModal @closeModal="$myFunctions.closeModal($.proxy)">
         <div class="prompt-modal-content flex flex-col justify-center p-2">
 
             <div class="text-center mb-6 w-full">
@@ -125,7 +125,9 @@ export default {
                     this.company.address = results.logradouro;
                     this.company.city = results.localidade;
                     this.company.state = results.uf;
-                })
+                }).catch((error) => {
+ this.$myFunctions.notifyError(this, error, "Não foi possível buscar o CEP");
+ })
             }
         }
     },
@@ -154,7 +156,7 @@ export default {
                 .then(function (response) {
                     self.$myFunctions.setResponse(self, response.data.message, "success");
                 }).catch((error) => {
-                    self.$myFunctions.setResponse(self, error.response.data, "error");
+                    self.$myFunctions.setResponse(self, self.$myFunctions.errorMessage(error, "Ocorreu um erro. Tente novamente."), "error");
                 }).then(() => {
                     self.loading = false;
                 })
@@ -189,7 +191,7 @@ export default {
 
             }).catch((error) => {
                 self.$myFunctions.stopModalLoading(self);
-                const msg = error.response?.data?.message || "Erro desconhecido ao excluir empresa.";
+                const msg = self.$myFunctions.errorMessage(error, "Erro desconhecido ao excluir empresa.");
                 self.$myFunctions.showFeedbackModal(self, "Erro", msg, "error");
             });
         }
@@ -230,3 +232,7 @@ export default {
     }
 }
 </style>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Empresa' })
+</script>

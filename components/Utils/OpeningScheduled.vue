@@ -13,9 +13,9 @@
         </div>
         <div class="day-hours">
             <div v-for="(hour, index) in hours" class="flex flex-col md:flex-row md:items-center">
-                <input type="time" class="flex-auto" v-model="hour.initial_date">
+                <input type="time" aria-label="Horário de abertura" class="flex-auto" v-model="hour.initial_date">
                 <span class="until fontsize-sm preto text-center md:text-left">até</span>
-                <input type="time" class="flex-auto" v-model="hour.final_date">
+                <input type="time" aria-label="Horário de fechamento" class="flex-auto" v-model="hour.final_date">
                 <div class="hour-buttons">
                     &nbsp;
                     <font-awesome v-if="index == (hours.length - 1)" icon="circle-plus" class="verde-escuro" v-on:click="addHour()" />

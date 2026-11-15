@@ -3,9 +3,10 @@
         <UtilsPageheader title="Estoque" subtitle="Gerencie os produtos em estoque" />
         <br>
         <UtilsDataTable :loaded="!loading" :dataTable="estoque" :rowsPerPage="7" table="produto"
-            newButtonText="Inserir movimentação" @handleNew="newMovement" :newButton="true">
+            :error="loadError" emptyText="Nenhum produto em estoque ainda. Cadastre produtos em Configurações e registre a primeira movimentação."
+            @retry="returnStock" newButtonText="Inserir movimentação" @handleNew="newMovement" :newButton="true">
             <template #column-produto="{ item }">
-                <p>{{ $myFunctions.formatTel(item.produto) }}</p>
+                <p>{{ item.produto }}</p>
             </template>
             <template #column-status="{ item }">
                 <p class="tag" :class="chooseTagClass(item.status)">{{ item.status }}</p>
@@ -14,8 +15,8 @@
                 <p>{{ item.quantidade }}</p>
             </template>
         </UtilsDataTable>
-        <UtilsModal @closeModal="$myFunctions.closeModal(this);">
-            <ModalContentEstoque @savedContent="$myFunctions.closeModal(this, []); returnStock()" />
+        <UtilsModal @closeModal="$myFunctions.closeModal($.proxy);">
+            <ModalContentEstoque @savedContent="$myFunctions.closeModal($.proxy, []); returnStock()" />
         </UtilsModal>
     </section>
 </template>
@@ -26,6 +27,7 @@ export default {
             response: "",
             responseType: "",
             loading: true,
+            loadError: "",
             estoque: []
         }
     },
@@ -50,14 +52,23 @@ export default {
             }
         },
         returnStock: function () {
-            let self = this;
+            this.loading = true;
+            this.loadError = "";
 
-            this.$base.api.get("/stock").then(function (response) {
-                self.estoque = response.data.returnObj;
-                self.loading = false;
+            this.$base.api.get("/stock").then((response) => {
+                this.estoque = response.data.returnObj || [];
+            }).catch((error) => {
+                this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar o estoque");
+                this.$myFunctions.notifyError(this, error, "Não foi possível carregar o estoque");
+            }).then(() => {
+                this.loading = false;
             })
         }
     }
 }
 </script>
 <style scoped></style>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Estoque' })
+</script>

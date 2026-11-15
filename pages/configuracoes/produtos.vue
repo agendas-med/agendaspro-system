@@ -19,19 +19,19 @@
             </template>
             <template #column-ações="{ item }">
                 <div class="flex space-x-2">
-                    <button class="rounded-button" v-on:click="handleEditProduct(item)">
-                        <font-awesome icon="pen" class="cinza" />
+                    <button type="button" class="rounded-button" aria-label="Editar" title="Editar" v-on:click="handleEditProduct(item)">
+                        <font-awesome icon="pen" class="cinza" aria-hidden="true" />
                     </button>
-                    <button class="rounded-button" v-on:click="handleDeleteProduct(item)">
-                        <font-awesome icon="trash" class="vermelho" />
+                    <button type="button" class="rounded-button" aria-label="Excluir" title="Excluir" v-on:click="handleDeleteProduct(item)">
+                        <font-awesome icon="trash" class="vermelho" aria-hidden="true" />
                     </button>
                 </div>
             </template>
         </UtilsDataTable>
-        <UtilsModal excludepath="/companies/products/" @closeModal="$myFunctions.closeModal(this);"
-            @excluded="$myFunctions.getCompany(this)">
+        <UtilsModal excludepath="/companies/products/" @closeModal="$myFunctions.closeModal($.proxy);"
+            @excluded="$myFunctions.getCompany($.proxy)">
             <ModalContentConfigProdutos
-                @savedContent="$myFunctions.closeModal(this, []); $myFunctions.getCompany(this)" />
+                @savedContent="$myFunctions.closeModal($.proxy, []); $myFunctions.getCompany($.proxy)" />
         </UtilsModal>
     </section>
 </template>
@@ -77,4 +77,8 @@ export default {
         }
     }
 }
+</script>
+
+<script setup>
+definePageMeta({ access: 'admin', title: 'Produtos' })
 </script>

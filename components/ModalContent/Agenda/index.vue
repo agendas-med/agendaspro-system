@@ -159,7 +159,9 @@ export default {
                     this.agendamento.address = results.logradouro;
                     this.agendamento.city = results.localidade;
                     this.agendamento.state = results.uf;
-                });
+                }).catch((error) => {
+ this.$myFunctions.notifyError(this, error, "Não foi possível buscar o CEP");
+ });
             }
         }
     },
@@ -284,7 +286,7 @@ export default {
             }).catch((error) => {
                 this.invalidForm = true;
                 this.$myFunctions.stopModalLoading(this);
-                this.$myFunctions.showFeedbackModal(this, "Erro", error.response?.data || "Ocorreu um erro ao salvar agendamento.", "error");
+                this.$myFunctions.showFeedbackModal(this, "Erro", this.$myFunctions.errorMessage(error, "Ocorreu um erro ao salvar agendamento."), "error");
             });
         },
         createSchedule(data) {

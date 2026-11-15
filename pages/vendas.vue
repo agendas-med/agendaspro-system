@@ -2,11 +2,12 @@
   <UtilsPageheader title="Vendas" subtitle="Gerencie as vendas realizadas no estabelecimento." />
   <br>
   <UtilsDataTable :loaded="!loading" :dataTable="vendas" :rowsPerPage="7" :newButton="true" @handleNew="newSale"
-    table="venda">
+    :error="loadError" emptyText="Nenhuma venda registrada ainda. Registre a primeira venda do estabelecimento."
+    @retry="returnSales" table="venda">
     <template #column-cliente="{ item }">
       <div class="flex items-center">
-        <img :teste="item.customer_image" :src="item.customer_image == '' ? defaultUserImage : item.customer_image"
-          class="avatar avatar-pp">
+        <img :src="item.customer_image == '' ? defaultUserImage : item.customer_image"
+          class="avatar avatar-pp" alt="">
         <div>
           <p><strong>{{ item.customer_name }}</strong></p>
         </div>
@@ -33,17 +34,17 @@
     </template>
     <template #column-ações="{ item }">
       <div class="flex space-x-2">
-        <button class="rounded-button" v-on:click="handleDeleteSale(item)">
-          <font-awesome icon="trash" class="vermelho" />
+        <button type="button" class="rounded-button" aria-label="Excluir venda" title="Excluir venda" v-on:click="handleDeleteSale(item)">
+          <font-awesome icon="trash" class="vermelho" aria-hidden="true" />
         </button>
-        <button class="rounded-button" v-on:click="handleEditSale(item)">
-          <font-awesome icon="pen" class="cinza" />
+        <button type="button" class="rounded-button" aria-label="Editar venda" title="Editar venda" v-on:click="handleEditSale(item)">
+          <font-awesome icon="pen" class="cinza" aria-hidden="true" />
         </button>
       </div>
     </template>
   </UtilsDataTable>
-  <UtilsModal excludepath="/sales/" @closeModal="$myFunctions.closeModal(this); returnSales()">
-    <ModalContentVendas :event="selectedEvent" @savedContent="$myFunctions.closeModal(this, []); returnSales()" />
+  <UtilsModal excludepath="/sales/" @closeModal="$myFunctions.closeModal($.proxy); returnSales()">
+    <ModalContentVendas :event="selectedEvent" @savedContent="$myFunctions.closeModal($.proxy, []); returnSales()" />
   </UtilsModal>
 </template>
 <script>
@@ -54,6 +55,7 @@ export default {
     return {
       defaultUserImage: defaultUserImage,
       loading: true,
+      loadError: "",
       modalContentVendas: false,
       vendas: []
     }
@@ -76,11 +78,15 @@ export default {
       }
     },
     returnSales: function () {
-      let self = this;
+      this.loadError = "";
 
-      this.$base.api.get("/sales").then(function (response) {
-        self.vendas = response.data.returnObj;
-        self.loading = false;
+      this.$base.api.get("/sales").then((response) => {
+        this.vendas = response.data.returnObj || [];
+      }).catch((error) => {
+        this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar as vendas");
+        this.$myFunctions.notifyError(this, error, "Não foi possível carregar as vendas");
+      }).then(() => {
+        this.loading = false;
       })
     },
     handleEditSale: function (item) {
@@ -114,3 +120,7 @@ export default {
 }
 </script>
 <style></style>
+
+<script setup>
+definePageMeta({ access: 'member', title: 'Vendas' })
+</script>

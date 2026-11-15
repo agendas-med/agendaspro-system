@@ -2,7 +2,7 @@
     <div class="ajax-autocomplete custom-invalid" invalid="true">
         <div class="ajax-autocomplete-wrapper" v-on:click="clearContainer()" v-if="entity_search.length > 2 && !force_close"></div>
         <div class="ajax-autocomplete-container">
-            <input type="text" id="ajax-autocomplete-input" :placeholder="entity_object.id == null || entity_object.id == 0 ? '*** para todos' : ''" :disabled="handledisabled" v-model="entity_search">
+            <input type="text" aria-label="Buscar" id="ajax-autocomplete-input" :placeholder="entity_object.id == null || entity_object.id == 0 ? '*** para todos' : ''" :disabled="handledisabled" v-model="entity_search">
             <div class="selected-entity" v-if="entity_object.id != null && entity_object.id != 0">
                 {{ entity_object.name }}
                 <font-awesome icon="times" v-on:click="deselectEntity()" v-if="!handledisabled" class="cursor-pointer" />
@@ -153,7 +153,7 @@ export default {
                 self.entities_list = response.data.returnObj;
                 self.empty_return = self.entities_list.length == 0;
             }).catch((error) => {
-                console.log(error);
+                self.$myFunctions.notifyError(self, error, "Não foi possível buscar os dados");
             })
         }
     }

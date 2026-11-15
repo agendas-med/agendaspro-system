@@ -63,7 +63,7 @@ export default {
             }).catch((error) => {
                 self.$myFunctions.stopModalLoading(self);
                 self.invalidForm = true;
-                self.$myFunctions.showFeedbackModal(self, "Erro", error.response?.data || "Ocorreu um erro ao registrar movimentação.", "error");
+                self.$myFunctions.showFeedbackModal(self, "Erro", self.$myFunctions.errorMessage(error, "Ocorreu um erro ao registrar movimentação."), "error");
             });
         }
     }
