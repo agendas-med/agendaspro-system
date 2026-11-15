@@ -1,0 +1,116 @@
+import { describe, it, expect } from "vitest";
+import {
+  unwrap, buildProfessionalPayload, rulesToWeek, validateWeek, buildRulesPayload, timeToMinutes,
+  normalizeEndTime, buildTimeBlockPayload, timeBlocksParams, buildSubscriptionPayload,
+  buildAppointmentPayload, filterEventsByProfessional, toWallTime,
+} from "../utils/payloads.js";
+
+describe("unwrap", () => {
+  it("aceita {data} (F2), {returnObj} (legado) e resposta do axios", () => {
+    expect(unwrap({ data: { data: [1] }, status: 200 })).toEqual([1]);
+    expect(unwrap({ data: { returnObj: { a: 1 } }, status: 200 })).toEqual({ a: 1 });
+    expect(unwrap({ data: [1] })).toEqual([1]);
+    expect(unwrap(null)).toBeNull();
+  });
+});
+
+describe("buildProfessionalPayload", () => {
+  it("criação omite e-mail/telefone vazios e campos desconhecidos", () => {
+    const p = buildProfessionalPayload({ name: " Ana ", email: "", phone: " ", color: "#AABBCC", service_ids: ["2", 2, 3, "x"], user_id: 9, photo_url: "" });
+    expect(p).toEqual({ name: "Ana", color: "#aabbcc", service_ids: [2, 3] });
+  });
+  it("edição limpa e-mail/telefone com null e envia active", () => {
+    const p = buildProfessionalPayload({ name: "Ana", email: "", phone: "11999990000", active: false }, { isEdit: true });
+    expect(p).toEqual({ name: "Ana", email: null, phone: "11999990000", active: false });
+  });
+  it("ignora cor inválida", () => {
+    expect(buildProfessionalPayload({ name: "A", color: "red" })).toEqual({ name: "A" });
+  });
+});
+
+describe("expediente semanal", () => {
+  it("converte regras da API em semana e de volta", () => {
+    const week = rulesToWeek([
+      { weekday: 1, start_time: "13:00:00", end_time: "18:00:00" },
+      { weekday: 1, start_time: "09:00", end_time: "12:00" },
+      { weekday: 0, start_time: "08:00", end_time: "12:00" },
+    ]);
+    expect(week[1]).toEqual([{ start_time: "09:00", end_time: "12:00" }, { start_time: "13:00", end_time: "18:00" }]);
+    expect(buildRulesPayload(week).rules).toEqual([
+      { weekday: 1, start_time: "09:00", end_time: "12:00" },
+      { weekday: 1, start_time: "13:00", end_time: "18:00" },
+      { weekday: 0, start_time: "08:00", end_time: "12:00" },
+    ]);
+  });
+  it("fim 00:00 vira 24:00 (meia-noite do mesmo dia)", () => {
+    expect(normalizeEndTime("18:00", "00:00")).toBe("24:00");
+    expect(normalizeEndTime("00:00", "00:00")).toBe("00:00");
+    expect(timeToMinutes("24:00")).toBe(1440);
+    expect(buildRulesPayload({ 5: [{ start_time: "18:00", end_time: "00:00" }] }).rules)
+      .toEqual([{ weekday: 5, start_time: "18:00", end_time: "24:00" }]);
+  });
+  it("valida fim depois do início, sobreposição e campos vazios", () => {
+    expect(validateWeek({ 1: [{ start_time: "09:00", end_time: "12:00" }, { start_time: "13:00", end_time: "18:00" }] })).toEqual([]);
+    expect(validateWeek({ 1: [{ start_time: "12:00", end_time: "09:00" }] })[0]).toMatch(/depois do início/);
+    expect(validateWeek({ 2: [{ start_time: "09:00", end_time: "12:00" }, { start_time: "11:00", end_time: "14:00" }] })[0]).toMatch(/sobrepostos/);
+    expect(validateWeek({ 3: [{ start_time: "", end_time: "12:00" }] })[0]).toMatch(/informe/i);
+  });
+});
+
+describe("bloqueios", () => {
+  it("dia inteiro cobre [dia 00:00, dia seguinte 00:00) e vale para a empresa", () => {
+    const { payload } = buildTimeBlockPayload({ scope: "company", allDay: true, date: "2027-12-31", reason: " Feriado " });
+    expect(payload).toEqual({ professional_id: null, starts_at: "2027-12-31 00:00", ends_at: "2028-01-01 00:00", reason: "Feriado" });
+  });
+  it("intervalo por profissional usa YYYY-MM-DD HH:mm e omite motivo vazio", () => {
+    const { payload } = buildTimeBlockPayload({ scope: "7", startsAt: "2027-03-07T09:00", endsAt: "2027-03-07T12:30", reason: "" });
+    expect(payload).toEqual({ professional_id: 7, starts_at: "2027-03-07 09:00", ends_at: "2027-03-07 12:30" });
+  });
+  it("rejeita datas inválidas ou fim antes do início", () => {
+    expect(buildTimeBlockPayload({ scope: "company", allDay: true, date: "" }).error).toBeTruthy();
+    expect(buildTimeBlockPayload({ scope: "company", startsAt: "2027-03-07T12:00", endsAt: "2027-03-07T09:00" }).error).toMatch(/depois do início/);
+    expect(buildTimeBlockPayload({ scope: "company", startsAt: "", endsAt: "" }).error).toBeTruthy();
+  });
+  it("converte datetime-local e filtros de período", () => {
+    expect(toWallTime("2027-03-07T09:00")).toBe("2027-03-07 09:00");
+    expect(toWallTime("lixo")).toBe("");
+    expect(timeBlocksParams({ from: "2027-03-01", to: "2027-03-31" })).toEqual({ from: "2027-03-01 00:00", to: "2027-03-31 23:59" });
+    expect(timeBlocksParams({ from: "", to: "" })).toEqual({});
+  });
+});
+
+describe("assinatura", () => {
+  it("premium envia billing_type válido; free não envia", () => {
+    expect(buildSubscriptionPayload("premium", "PIX")).toEqual({ plan_code: "premium", billing_type: "PIX" });
+    expect(buildSubscriptionPayload("premium", "XYZ")).toEqual({ plan_code: "premium", billing_type: "UNDEFINED" });
+    expect(buildSubscriptionPayload("free", "PIX")).toEqual({ plan_code: "free" });
+  });
+});
+
+describe("agendamento", () => {
+  const source = {
+    id: 5, company_id: 1, customer_id: 3, customer_name: "Bia", date: "2027-03-07 09:00", duration: 60,
+    observations: "x", status: "scheduled", color: "#fff", professional_id: 4, extra: true,
+    services: [{ id: 1, name: "Corte", value: 50, cost: 5, duration: 30, junk: 1, requires_location: 0 }],
+  };
+  it("só envia campos conhecidos e serviços sem lixo", () => {
+    const p = buildAppointmentPayload(source);
+    expect(p).not.toHaveProperty("extra");
+    expect(p).not.toHaveProperty("id");
+    expect(p).not.toHaveProperty("color");
+    expect(p).not.toHaveProperty("professional_id"); // omitido mantém o atual no PATCH
+    expect(p.duration).toBe("60");
+    expect(p.services).toEqual([{ id: 1, name: "Corte", value: 50, cost: 5, duration: 30, requires_location: 0 }]);
+  });
+  it("professional_id: número, null (sem profissional) ou omitido", () => {
+    expect(buildAppointmentPayload(source, { professionalId: "4" }).professional_id).toBe(4);
+    expect(buildAppointmentPayload(source, { professionalId: "" }).professional_id).toBeNull();
+    expect(buildAppointmentPayload(source, { professionalId: null }).professional_id).toBeNull();
+  });
+  it("filtra eventos por profissional", () => {
+    const events = [{ id: 1, professional_id: 4 }, { id: 2, professional_id: null }, { id: 3, professional_id: 5 }];
+    expect(filterEventsByProfessional(events, "")).toHaveLength(3);
+    expect(filterEventsByProfessional(events, "4").map((e) => e.id)).toEqual([1]);
+    expect(filterEventsByProfessional(events, "none").map((e) => e.id)).toEqual([2]);
+  });
+});
