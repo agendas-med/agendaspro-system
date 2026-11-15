@@ -1,26 +1,64 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { BASE_HEADERS, buildCsp, buildHeadersFile, inlineScriptHashes } from './config/securityHeaders.mjs';
+
+// Valores de runtime (sobrescritos por NUXT_PUBLIC_*). Ver .env.example.
+const apiBase = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001';
+const googleClientId = process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || '';
+
 export default defineNuxtConfig({
-  runtimeConfig: { public: { apiBase: 'http://localhost:3001' } },
+  runtimeConfig: {
+    public: {
+      apiBase,
+      siteUrl,
+      googleClientId,
+    },
+  },
   compatibilityDate: '2024-04-03',
   app: {
     head: {
       htmlAttrs: {
         lang: 'pt-BR',
       },
-      link: [
-        { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css' }
-      ]
+      meta: [
+        { name: 'robots', content: 'noindex, nofollow' },
+      ],
+    },
+  },
+  // Cabeçalhos simples aplicados por qualquer servidor Nitro (preview/node). A CSP é gerada no
+  // hook abaixo (precisa dos hashes dos scripts inline) e vai em public/_headers.
+  routeRules: {
+    '/**': { headers: { ...BASE_HEADERS } },
+  },
+  hooks: {
+    // Ao final do `nuxt generate`, grava _headers (Netlify/Cloudflare Pages) com a CSP calculada.
+    'nitro:init'(nitro) {
+      nitro.hooks.hook('prerender:done', () => {
+        const publicDir = nitro.options.output.publicDir;
+        if (!publicDir || !existsSync(publicDir)) return;
+
+        const htmlFiles = readdirSync(publicDir).filter((file) => file.endsWith('.html'));
+        const hashes = new Set();
+        for (const file of htmlFiles) {
+          for (const hash of inlineScriptHashes(readFileSync(join(publicDir, file), 'utf8'))) hashes.add(hash);
+        }
+
+        const csp = buildCsp({ apiBase, scriptHashes: [...hashes], googleEnabled: !!googleClientId });
+        writeFileSync(join(publicDir, '_headers'), buildHeadersFile({ csp }));
+      });
     },
   },
   devServer: {
     host: '0.0.0.0',
-    port: 8080 
+    port: 8080
   },
   devtools: { enabled: false },
   css: ['~/assets/css/main.css', '@fortawesome/fontawesome-svg-core/styles.css'],
   fontawesome: {
     icons: {
-      solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group', 
+      solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group',
         'chart-simple', 'wallet', 'bars', 'angle-down','search', 'filter', 'arrow-down-wide-short', 'trash', 'circle-plus', 'user-lock', 'angle-left', 'angle-right', 'angle-down',
         'backward-step', 'location-dot', 'forward-step', 'plus', 'user-pen', 'gear', 'pen', 'circle-info', 'trash-can', 'circle-check', 'circle-play', 'circle-stop', 'circle-xmark', 'triangle-exclamation', 'bag-shopping', 'dolly', 'rotate-left', 'copy', 'circle-notch'],
       regular: ['comment', 'face-smile'],
