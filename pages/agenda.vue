@@ -53,7 +53,7 @@ import ptLocale from '@fullcalendar/core/locales/pt-br';
 import { toBusinessHours } from '../utils/format.js';
 import {
   unwrap, professionalsById, filterEventsByProfessional, buildAppointmentPayload, DEFAULT_TIMEZONE,
-  wallClock, wallMinutesBetween, presetProfessionalId,
+  wallClock, wallMinutesBetween, presetProfessionalId, normalizeAppointmentEvent, eventOverlapsRange,
 } from '../utils/payloads.js';
 
 const PERIODS = [
@@ -222,19 +222,14 @@ export default {
       const range = this.range;
       if (!range) return;
 
-      const visible = this.rawEvents.filter((event) => this.overlapsRange(event, range));
+      // O core serializa a hora de parede como ISO com "Z" (parede + 3h): normaliza uma vez para a parede
+      // da empresa, que o calendário (timeZone nomeado), o modal e o PATCH usam sem nova conversão.
+      const normalized = this.rawEvents.map(normalizeAppointmentEvent);
+      const visible = normalized.filter((event) => eventOverlapsRange(event, range));
       const filtered = filterEventsByProfessional(visible, this.professionalFilter);
       const byId = professionalsById(this.professionals);
 
-      this.calendarEvents = filtered.map((event) => this.decorateEvent({ ...event }, byId));
-    },
-    overlapsRange: function (event, range) {
-      const start = moment(event.start || event.date);
-      if (!start.isValid()) return true;
-
-      const end = event.end && moment(event.end).isValid() ? moment(event.end) : start.clone();
-
-      return start.isBefore(moment(range.end)) && end.isSameOrAfter(moment(range.start));
+      this.calendarEvents = filtered.map((event) => this.decorateEvent(event, byId));
     },
     decorateEvent: function (event, professionalsMap = {}) {
       let statusColor = "var(--verde)";

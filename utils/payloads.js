@@ -225,8 +225,48 @@ export function buildAppointmentPayload(source, { professionalId } = {}) {
 // Hora de parede de uma string ISO ("2027-03-07T09:00:00-03:00", "2027-03-07 09:00") como
 // "YYYY-MM-DD HH:mm:ss", sem converter para o fuso do navegador. Vazio se não reconhecer.
 export function wallClock(value) {
-  const m = String(value || "").match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+  const s = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 00:00:00`;
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
   return m ? `${m[1]} ${m[2]}:${m[3] || "00"}` : "";
+}
+
+// O core lê DATETIME com o pool MySQL em '-03:00' fixo (mysql.js) e serializa o Date em ISO com "Z":
+// a hora de parede 09:00 chega como "...T12:00:00.000Z", qualquer que seja o fuso da empresa.
+// Valores com offset/Z são, então, "parede + 3h": volta para a parede com o mesmo deslocamento fixo.
+// Valores sem offset (ex.: se o core passar a enviar a parede) são usados como estão.
+export const CORE_DB_OFFSET_MINUTES = -180;
+const HAS_OFFSET = /(Z|[+-]\d{2}:?\d{2})$/i;
+
+export function coreWall(value) {
+  const s = String(value || "").trim();
+  if (!s) return "";
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s) || !HAS_OFFSET.test(s)) return wallClock(s);
+  const ms = Date.parse(s.replace(" ", "T"));
+  if (Number.isNaN(ms)) return "";
+  const d = new Date(ms + CORE_DB_OFFSET_MINUTES * 60000);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
+
+// Evento do core -> evento do calendário em hora de parede ("YYYY-MM-DDTHH:mm:ss", sem offset: o
+// FullCalendar a interpreta no fuso da empresa). `date` também vira parede, para o modal de edição.
+export function normalizeAppointmentEvent(event) {
+  const start = coreWall(event.start || event.date);
+  if (!start) return { ...event };
+  const end = coreWall(event.end) || start;
+  return { ...event, date: start, start: start.replace(" ", "T"), end: end.replace(" ", "T") };
+}
+
+// Intervalo [start, end) do calendário vs. evento, tudo em hora de parede (comparação lexicográfica).
+export function eventOverlapsRange(event, range) {
+  const start = wallClock(event.start || event.date);
+  if (!start) return true;
+  const end = wallClock(event.end) || start;
+  const rangeStart = wallClock(range.start);
+  const rangeEnd = wallClock(range.end);
+  if (!rangeStart || !rangeEnd) return true;
+  return start < rangeEnd && end >= rangeStart;
 }
 
 // Minutos entre duas horas de parede (calculado em UTC: sem efeito de DST/fuso do navegador).
@@ -261,10 +301,34 @@ const COMPANY_KEYS = [
   "business_type", "roles", "asaas_status",
 ];
 
+const pick = (source, keys) => {
+  const out = {};
+  for (const key of keys) if (source && source[key] !== undefined) out[key] = source[key];
+  return out;
+};
+
+// schemas/companies.js (editCompany) é estrito também nos níveis aninhados de `configurations`.
+function buildConfigurations(configurations) {
+  if (!configurations || typeof configurations !== "object") return configurations;
+  const out = {};
+  if (Array.isArray(configurations.notifications)) {
+    out.notifications = configurations.notifications.map((n) => pick(n, ["id", "code", "name", "active"]));
+  }
+  if (Array.isArray(configurations.opening_hours)) {
+    out.opening_hours = configurations.opening_hours.map((d) => ({
+      ...pick(d, ["day"]),
+      ...(Array.isArray(d && d.hours)
+        ? { hours: d.hours.map((h) => pick(h, ["initial_date", "final_date"])) }
+        : pick(d, ["hours"])),
+    }));
+  }
+  return out;
+}
+
 // PATCH /companies/:id: o core rejeita campos desconhecidos e o objeto global da empresa tem outros.
 export function buildCompanyPayload(company) {
-  const payload = {};
-  for (const key of COMPANY_KEYS) if (company && company[key] !== undefined) payload[key] = company[key];
+  const payload = pick(company, COMPANY_KEYS);
+  if (payload.configurations !== undefined) payload.configurations = buildConfigurations(payload.configurations);
   return payload;
 }
 

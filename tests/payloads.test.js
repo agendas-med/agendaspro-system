@@ -4,7 +4,33 @@ import {
   normalizeEndTime, buildTimeBlockPayload, timeBlocksParams, buildSubscriptionPayload,
   buildAppointmentPayload, filterEventsByProfessional, toWallTime,
   formatWall, wallClock, wallMinutesBetween, professionalIdForPayload, presetProfessionalId, buildCompanyPayload,
+  coreWall, normalizeAppointmentEvent, eventOverlapsRange,
 } from "../utils/payloads.js";
+
+describe("agendamentos vindos do core (ISO com Z = parede + 3h)", () => {
+  it("coreWall devolve a parede da empresa a partir do Z do driver e aceita parede pura", () => {
+    expect(coreWall("2027-03-07T12:00:00.000Z")).toBe("2027-03-07 09:00:00");
+    expect(coreWall("2027-03-08T02:30:00.000Z")).toBe("2027-03-07 23:30:00");
+    expect(coreWall("2027-03-07T09:00:00-03:00")).toBe("2027-03-07 09:00:00");
+    expect(coreWall("2027-03-07 09:00:00")).toBe("2027-03-07 09:00:00");
+    expect(coreWall("2027-03-07T09:00:00")).toBe("2027-03-07 09:00:00");
+    expect(coreWall("")).toBe("");
+  });
+  it("normalizeAppointmentEvent grava start/end/date em parede e mantém os demais campos", () => {
+    const e = normalizeAppointmentEvent({ id: 1, professional_id: 3, date: "2027-03-07T12:00:00.000Z", start: "2027-03-07T12:00:00.000Z", end: "2027-03-07T13:30:00.000Z" });
+    expect(e).toMatchObject({ id: 1, professional_id: 3, date: "2027-03-07 09:00:00", start: "2027-03-07T09:00:00", end: "2027-03-07T10:30:00" });
+  });
+  it("normalizeAppointmentEvent sem data válida não quebra", () => {
+    expect(normalizeAppointmentEvent({ id: 2, start: "x" })).toEqual({ id: 2, start: "x" });
+  });
+  it("eventOverlapsRange compara em parede, com início inclusivo e fim exclusivo", () => {
+    const range = { start: "2027-03-07T00:00:00-03:00", end: "2027-03-08T00:00:00-03:00" };
+    expect(eventOverlapsRange({ start: "2027-03-07T09:00:00", end: "2027-03-07T10:00:00" }, range)).toBe(true);
+    expect(eventOverlapsRange({ start: "2027-03-08T00:00:00", end: "2027-03-08T01:00:00" }, range)).toBe(false);
+    expect(eventOverlapsRange({ start: "2027-03-06T22:00:00", end: "2027-03-07T00:30:00" }, range)).toBe(true);
+    expect(eventOverlapsRange({ start: "2027-03-05T10:00:00", end: "2027-03-05T11:00:00" }, { start: "2027-03-07", end: "2027-03-14" })).toBe(false);
+  });
+});
 
 describe("hora de parede (fuso da empresa)", () => {
   it("wallClock ignora o offset e não converte para o fuso do navegador", () => {
@@ -57,6 +83,20 @@ describe("buildCompanyPayload", () => {
       "address", "asaas_status", "business_type", "city", "configurations", "id", "name", "products", "roles",
       "services", "state", "zip_code",
     ]);
+  });
+  it("poda também os níveis aninhados de configurations", () => {
+    const payload = buildCompanyPayload({
+      name: "Studio",
+      configurations: {
+        extra: 1,
+        notifications: [{ id: 1, code: "a", name: "A", active: true, description: "x" }],
+        opening_hours: [{ day: 1, label: "seg", hours: [{ initial_date: "09:00", final_date: "18:00", id: 3 }] }],
+      },
+    });
+    expect(payload.configurations).toEqual({
+      notifications: [{ id: 1, code: "a", name: "A", active: true }],
+      opening_hours: [{ day: 1, hours: [{ initial_date: "09:00", final_date: "18:00" }] }],
+    });
   });
 });
 

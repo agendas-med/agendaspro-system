@@ -89,7 +89,7 @@ export default {
             this.$global.modalUtils.isLoading = true;
             setTimeout(() => {
                 const button = document.getElementById(buttonId);
-                if (button && button.form && !button.form.checkValidity()) {
+                if (button && button.form && !button.form.noValidate && !button.form.checkValidity()) {
                     this.$global.modalUtils.isLoading = false;
                 }
                 $("#" + buttonId).click();
