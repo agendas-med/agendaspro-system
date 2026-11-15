@@ -34,7 +34,7 @@
                 <p class="fontsize-sm cinza" v-if="!usage.exceeded">Restam {{ usage.remaining }} mensagens neste mês.</p>
             </template>
 
-            <div class="wa-notice" :class="usage.exceeded ? 'danger' : 'warning'" role="alert" v-if="usage.exceeded && usage.upgradeInvite">
+            <div class="wa-notice danger" role="alert" v-if="isCurrent && usage.exceeded && usage.upgradeInvite">
                 <p>
                     <strong>Você atingiu o limite de mensagens do plano Free.</strong>
                     O bot e os atendentes não conseguem enviar novas mensagens até o próximo mês. Com o Premium o envio continua.
@@ -45,7 +45,7 @@
             <div class="wa-notice warning" role="status" v-else-if="usage.exceeded">
                 O limite mensal de mensagens do plano foi atingido.
             </div>
-            <div class="wa-notice warning" role="status" v-else-if="usage.near">
+            <div class="wa-notice warning" role="status" v-else-if="isCurrent && usage.near">
                 Você já usou {{ usage.percent }}% das mensagens do mês.
                 <template v-if="usage.plan !== 'premium'">O Premium remove o limite.</template>
             </div>
@@ -89,6 +89,9 @@ export default {
     computed: {
         isAdmin() {
             return this.$myFunctions.hasPermission(this);
+        },
+        isCurrent() {
+            return this.period === currentPeriod();
         },
         planName() {
             return this.usage.plan === "premium" ? "Premium" : "Free";

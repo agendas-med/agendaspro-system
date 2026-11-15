@@ -88,7 +88,7 @@
                             <font-awesome icon="paper-plane" aria-hidden="true" /> Enviar
                         </button>
                     </form>
-                    <p class="fontsize-sm cinza" v-if="!conv.windowOpen">
+                    <p class="fontsize-sm cinza" v-if="!conv.windowOpen && !showTemplates">
                         <button type="button" class="link-button" v-on:click="openTemplates()">Enviar um modelo aprovado</button>
                     </p>
                 </template>
@@ -193,7 +193,10 @@ export default {
         setConversation(conv) {
             this.conv = conv;
             this.$emit("updated", conv);
-            if (!conv.windowOpen && !conv.optedOut) this.showTemplates = true;
+            if (!conv.windowOpen && !conv.optedOut) {
+                this.showTemplates = true;
+                this.loadTemplates();
+            }
         },
         async load() {
             const token = this.token;
@@ -211,7 +214,6 @@ export default {
                 this.setConversation(normalizeConversation(unwrap(convRes)));
                 this.loading = false;
                 this.$nextTick(() => this.scrollToBottom());
-                if (this.showTemplates) this.loadTemplates();
             } catch (error) {
                 if (token !== this.token) return;
                 this.loading = false;

@@ -73,7 +73,8 @@ export default {
         preview(c) {
             const m = c.lastMessage;
             if (!m || !m.body) return "Sem mensagens";
-            return (m.direction === "out" ? "Você: " : "") + m.body;
+            const prefix = m.direction !== "out" ? "" : m.author === "bot" ? "Bot: " : "Atendente: ";
+            return prefix + m.body;
         }
     }
 }
