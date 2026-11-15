@@ -35,6 +35,12 @@
             <p class="fontsize-sm">CONFIGURAÇÕES</p>
             <ul>
                 <li class="fontsize-md sidebar-text">
+                    <router-link to="/profissionais" @click.native="$emit('closeSidebar')"><font-awesome icon="user-tie" class="sidebar-icons" />Profissionais</router-link>
+                </li>
+                <li class="fontsize-md sidebar-text">
+                    <router-link to="/billing/plano" @click.native="$emit('closeSidebar')"><font-awesome icon="credit-card" class="sidebar-icons" />Plano e cobrança</router-link>
+                </li>
+                <li class="fontsize-md sidebar-text">
                     <router-link to="/configuracoes" @click.native="$emit('closeSidebar')"><font-awesome icon="gear" class="sidebar-icons" />Configurações</router-link>
                 </li>
             </ul>

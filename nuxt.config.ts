@@ -60,7 +60,7 @@ export default defineNuxtConfig({
     icons: {
       solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group',
         'chart-simple', 'wallet', 'bars', 'angle-down','search', 'filter', 'arrow-down-wide-short', 'trash', 'circle-plus', 'user-lock', 'angle-left', 'angle-right', 'angle-down',
-        'backward-step', 'location-dot', 'forward-step', 'plus', 'user-pen', 'gear', 'pen', 'circle-info', 'trash-can', 'circle-check', 'circle-play', 'circle-stop', 'circle-xmark', 'triangle-exclamation', 'bag-shopping', 'dolly', 'rotate-left', 'copy', 'circle-notch'],
+        'backward-step', 'location-dot', 'forward-step', 'plus', 'user-pen', 'gear', 'pen', 'circle-info', 'trash-can', 'circle-check', 'circle-play', 'circle-stop', 'circle-xmark', 'triangle-exclamation', 'bag-shopping', 'dolly', 'rotate-left', 'copy', 'circle-notch', 'clock', 'ban', 'user-tie', 'credit-card'],
       regular: ['comment', 'face-smile'],
       brands: ['twitter'],
     },

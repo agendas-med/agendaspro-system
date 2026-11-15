@@ -52,6 +52,7 @@
                 <UtilsLoadingResponse :msg="response" :type="responseType" :loading="false"
                     @eraseError="$myFunctions.resetResponse($.proxy)" />
             </form>
+            <ConfigTimezone />
             <div v-if="isAdmin" class="mt-8 border border-red-500 rounded-lg p-6" style="background-color: #fef2f2;">
                 <h3 class="fontsize-lg-bold mb-2" style="color: #b91c1c;">Zona de Perigo</h3>
                 <p class="fontsize-sm mb-4" style="color: #991b1b;">
