@@ -77,3 +77,16 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## WhatsApp (F4)
+
+Menu **WhatsApp** (ESTABELECIMENTO, qualquer membro) com duas abas:
+
+- `/whatsapp/conversas`: caixa de entrada (`GET /whatsapp/conversations`, filtro por estado, "Carregar mais"), conversa aberta (`GET conversations/:id` e `/messages`, "Ver mensagens anteriores"), **Assumir** / **Devolver ao bot** (`POST .../assume|release`) e envio (`POST .../messages` com `{text}` ou `{template, params}`). Atualização leve a cada 15 s **só com a aba visível** (pausa em `visibilitychange`; sem websocket).
+- `/whatsapp/configuracao`: status e número da plataforma, link `wa_link` com botão copiar e QR Code, uso do mês contra o limite do plano (convite de upgrade quando excedido), configuração do bot/IA (**somente admin**; os demais veem os campos desabilitados) e lista somente leitura de modelos aprovados/pendentes.
+
+Erros de envio tratados na conversa: `409 window_closed` (abre o seletor de modelo), `409 opted_out` (envio bloqueado), `409 template_unavailable`, `400 template_params`, `402 plan_upgrade_required` (modal global + aviso na conversa com link para `/billing/plano`), `404 conversation_not_found` e `502 send_failed`.
+
+Segurança: nomes e mensagens de clientes são sempre interpolados como texto (nenhum `v-html`); o link do WhatsApp só é usado se tiver a forma `https://wa.me/<número>`. Dependência nova: `qrcode-generator` (QR em SVG, sem dependências).
+
+Código: lógica pura e testável em `utils/whatsapp.js`, `utils/qr.js` e `utils/clipboard.js`; telas em `pages/whatsapp*`; componentes em `components/Whatsapp/`. Testes: `npm test` (`tests/whatsapp*.test.js`).

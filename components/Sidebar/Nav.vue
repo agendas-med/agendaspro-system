@@ -12,6 +12,9 @@
                 <li class="fontsize-md sidebar-text">
                     <router-link to="/clientes" @click.native="$emit('closeSidebar')"><font-awesome icon="user-group" class="sidebar-icons" />Clientes</router-link>
                 </li>
+                <li class="fontsize-md sidebar-text">
+                    <router-link to="/whatsapp" @click.native="$emit('closeSidebar')"><font-awesome icon="comments" class="sidebar-icons" />WhatsApp</router-link>
+                </li>
                 <li class="fontsize-md sidebar-text" v-if="this.$myFunctions.hasPermission(this)">
                     <router-link to="/relatorios" @click.native="$emit('closeSidebar')"><font-awesome icon="chart-simple" class="sidebar-icons" />Relatórios</router-link>
                 </li>
