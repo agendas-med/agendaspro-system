@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fortawesome/free-brands-svg-icons": "^6.6.0",
@@ -29,12 +30,13 @@
     "nuxt": "^3.13.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
-    "vue": "latest",
+    "vue": "3.5.12",
     "vue-chartjs": "^5.3.1",
-    "vue-router": "latest",
+    "vue-router": "4.4.5",
     "vue3-google-login": "^2.0.33"
   },
   "devDependencies": {
-    "sass-embedded": "^1.79.5"
+    "sass-embedded": "^1.79.5",
+    "vitest": "^2.1.9"
   }
 }
