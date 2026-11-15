@@ -537,3 +537,30 @@ input[type="radio"]:checked::after {
   height: 100dvh;
   z-index: 3;
 }
+
+/* Botões de ícone acessíveis (substituem ícones clicáveis soltos) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--verde-escuro);
+  outline-offset: 2px;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--cinza);
+  font-size: var(--fontsize-sm);
+}

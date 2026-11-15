@@ -1,7 +1,10 @@
 import vue3GoogleLogin from 'vue3-google-login';
 
+// O clientId vem da configuração de runtime (NUXT_PUBLIC_GOOGLE_CLIENT_ID).
+// Sem ele, o login com Google fica desativado (o botão é ocultado em components/Google/Auth.vue).
 export default defineNuxtPlugin(nuxtApp => {
-  nuxtApp.vueApp.use(vue3GoogleLogin, {
-    clientId: "434780586987-g5nnt17nfg774gsamkg1bq3g1t977odc.apps.googleusercontent.com"
-  });
+  const clientId = useRuntimeConfig().public.googleClientId;
+  if (!clientId) return;
+
+  nuxtApp.vueApp.use(vue3GoogleLogin, { clientId });
 });

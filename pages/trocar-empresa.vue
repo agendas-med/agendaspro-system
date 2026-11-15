@@ -4,10 +4,14 @@
         <h1 class="fontsize-xl-bold preto">Trocar de empresa</h1>
         <p class="fontsize-md cinza">Entre em outra empresa que você faz parte ou crie uma nova.</p>
         <div class="companies-list">
-          <div class="company" v-for="(company, index) in companiesList" :key="index" v-on:click="goToCompany(company.id)">
-            <p class="fontsize-md cinza">{{ company.name }}</p>
-            <i class="fa-solid fa-angle-right"></i>
-          </div>
+          <p class="fontsize-md cinza" v-if="loading">Carregando empresas...</p>
+          <p class="fontsize-md vermelho" v-else-if="loadError" role="alert">{{ loadError }}</p>
+          <p class="fontsize-md cinza" v-else-if="!companiesList.length">Você ainda não faz parte de nenhuma empresa. Crie a primeira abaixo.</p>
+          <button type="button" class="company" v-for="company in companiesList" :key="company.id"
+            :aria-label="'Entrar na empresa ' + company.name" v-on:click="goToCompany(company.id)">
+            <span class="fontsize-md cinza">{{ company.name }}</span>
+            <font-awesome icon="angle-right" aria-hidden="true" />
+          </button>
         </div>
         <button type="button" class="btn btn-primary" v-on:click="createCompany()">Criar empresa</button>
       </div>
@@ -16,10 +20,11 @@
   
   <script>
   export default {
-    layout: 'cleanPage',
     data() {
       return {
-        companiesList: []
+        companiesList: [],
+        loading: true,
+        loadError: ""
       }
     },
     mounted: function () {
@@ -27,16 +32,20 @@
     },
     methods: {
       returnCompaniesList: function () {
-        let self = this;
-        
-        this.$base.api.get("/users/return_companies", { headers: { Authorization: "Bearer " + localStorage.getItem("agendaspro_jwt") } })
-        .then(function(response){            
-          self.companiesList = response.data.returnObj;          
+        // O header Authorization é adicionado pelo interceptor do cliente de API.
+        this.$base.api.get("/users/return_companies")
+        .then((response) => {
+          this.companiesList = response.data.returnObj || [];
+        }).catch((error) => {
+          this.loadError = this.$myFunctions.errorMessage(error, "Não foi possível carregar suas empresas");
+        }).then(() => {
+          this.loading = false;
         })
       },
       goToCompany: function (company_id) {
         localStorage.setItem("selected_company", company_id);
-        this.$router.push("/agenda");
+        // Recarrega de verdade: a sessão (empresa, permissões) fica em cache durante o boot.
+        window.location.href = "/agenda";
       },
       createCompany: function () {
         this.$router.push("/criar-empresa");
@@ -56,19 +65,25 @@
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--cinza-medio);
   cursor: pointer;
+  width: 100%;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  text-align: left;
 
-  & i {
+  & svg {
     transition: transform 0.4s ease-in-out;
     transform: translateX(-7px);
   }
 
-  &:hover {    
-    & p {
+  &:hover, &:focus-visible {
+    & span {
       transition: color 0.4s ease-in-out;
       color: var(--black);
     }
 
-    & i {
+    & svg {
       transform: translateX(-3px);
     }
   }
@@ -78,3 +93,7 @@
   }
 }
 </style>
+
+<script setup>
+definePageMeta({ layout: 'login', access: 'user', title: 'Trocar de empresa' })
+</script>

@@ -65,18 +65,31 @@ export default {
                             this.$global.company.asaas_status = asaasData.status;
                             this.onboardingUrl = asaasData.onboardingUrl;
                         }
-                    }).catch(err => console.error("Erro ao validar conta Asaas."));
+                    }).catch(() => { /* banner informativo: falha silenciosa, não bloqueia o uso */ });
             }
         }
     },
     mounted: function () {
-        window.onresize = () => {
+        this.onResize = () => {
             this.isResponsive = window.innerWidth <= 1029;
-        }
+        };
+        window.addEventListener('resize', this.onResize);
+    },
+    beforeUnmount() {
+        window.removeEventListener('resize', this.onResize);
     },
     async created() {
-        this.$myFunctions.initSystem(this).then((initialized) => {
-            if (!initialized) return;
+        // A sessão já foi validada pelo middleware (auth.global); aqui só reaproveitamos a mesma promessa.
+        this.$myFunctions.ensureSession(this).then((session) => {
+            if (session.status === 'error') {
+                this.initializationError = 'Não foi possível carregar o sistema. Verifique a conexão com a API e tente novamente.';
+                return;
+            }
+            if (session.status !== 'ok') {
+                // Sessão inválida ou sem empresa: o middleware decide o destino na próxima navegação.
+                navigateTo(session.status === 'no-company' ? '/criar-empresa' : '/entrar', { replace: true });
+                return;
+            }
             this.fetchAsaasStatus();
 
             setTimeout(() => {

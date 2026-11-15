@@ -1,7 +1,7 @@
 <template>
-    <GoogleLogin :callback="handleLoginSuccess">
-        <button class="google-btn">
-            <img src="../../assets/img/google-logo.png">
+    <GoogleLogin v-if="enabled" :callback="handleLoginSuccess">
+        <button type="button" class="google-btn">
+            <img src="../../assets/img/google-logo.png" alt="" aria-hidden="true">
             {{ text }}
         </button>
     </GoogleLogin>
@@ -11,21 +11,25 @@ import { GoogleLogin } from 'vue3-google-login';
 
 export default {
     props: ["text"],
+    emits: ["response"],
     components: {
         GoogleLogin
     },
+    computed: {
+        // Sem clientId configurado o plugin nao e registrado: oculta o botao.
+        enabled() {
+            return !!this.$config.public.googleClientId;
+        }
+    },
     methods: {
         handleLoginSuccess(response) {
-            let self = this;
-
-            self.$base.api.post("users/google-login", { token: response.code }).then((results) => {
-                self.$emit("response", { msg: "Usuário autenticado com sucesso", type: "success" });
-
-                self.$myFunctions.setJwtInLocalStorage(self, results.data.returnObj.token);
+            this.$base.api.post("users/google-login", { token: response.code }).then((results) => {
+                this.$myFunctions.storeLoginResponse(this, results.data);
+                this.$emit("response", { msg: "Usuário autenticado com sucesso", type: "success" });
 
                 window.location.href = "/agenda";
             }).catch((error) => {
-                self.$emit("response", { msg: error.response.data, type: "error" });
+                this.$emit("response", { msg: this.$myFunctions.errorMessage(error, "Não foi possível entrar com o Google"), type: "error" });
             })
         }
     }

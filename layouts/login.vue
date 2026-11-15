@@ -13,7 +13,7 @@
 export default {
     mounted: function () {
         this.$myFunctions.checkAndSetJwt(this).then(() => {
-            this.$myFunctions.returnBusinessTypes(this);
+            this.$myFunctions.returnBusinessTypes(this).catch(() => { /* lista opcional nesta tela */ });
         });
     }
 }

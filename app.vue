@@ -1,54 +1,22 @@
 <template>
   <div>
-    <NuxtLayout :name="layoutName">
+    <!-- O layout vem de definePageMeta({ layout }) em cada página (padrão: default). -->
+    <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
     <UtilsFeedbackModal />
+    <UtilsConfirmDialog />
+    <UtilsToast />
   </div>
 </template>
 
 <script setup>
-import { useRoute } from 'vue-router'
-import { ref, watch } from 'vue'
+import { computed } from 'vue'
 
 const route = useRoute()
 
-const layoutName = ref(getLayoutName(route.path))
-
-function getLayoutName(path) {
-  if (isValidRoute(path)) {
-    return 'default'
-  } else {
-    return 'login'
-  }
-}
-
-function isValidRoute(path) {
-  let routes = [
-    "/agenda",
-    "/vendas",
-    "/clientes",
-    "/relatorios",
-    "/financeiro",
-    "/financeiro/pagamentos",
-    "/financeiro/metodos-pagamento",
-    "/configuracoes",
-    "/configuracoes/usuarios",
-    "/configuracoes/empresa",
-    "/configuracoes/cargos",
-    "/configuracoes/servicos",
-    "/configuracoes/produtos",
-    "/configuracoes/preferencias",
-    "/perfil",
-    "/empresa_entrar",
-    "/checkin",
-    "/estoque"
-  ]
-
-  return routes.some(route => route == path);
-}
-
-watch(() => route.path, (newPath) => {
-  layoutName.value = getLayoutName(newPath)
+// Título por página: definePageMeta({ title }).
+useHead({
+  title: computed(() => (route.meta && route.meta.title ? `${route.meta.title} | AgendasPro` : 'AgendasPro'))
 })
 </script>

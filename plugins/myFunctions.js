@@ -1,7 +1,15 @@
+import {
+  formatTel, returnCleanNumber, formatCpf, formatDate, formatHour, formatDateFromDB,
+  returnAge, formatCurrency, returnFloatNumber, capitalize, formatMinutesToTime, formatDuration,
+} from "../utils/format.js";
+import { apiErrorMessage, toDisplayText } from "../utils/errors.js";
+import { isAdminUser } from "../utils/access.js";
+
 export default defineNuxtPlugin((nuxtApp) => {
   // Métodos de resposta
+  // msg pode ser string, objeto de erro da API ou erro do axios: sempre vira texto.
   const setResponse = (instance, msg, type) => {
-    instance.response = msg;
+    instance.response = toDisplayText(msg);
     instance.responseType = type;
   };
 
@@ -60,7 +68,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const showFeedbackModal = (instance, title, message, type = "success") => {
     instance.$global.modalUtils.feedback.title = title;
-    instance.$global.modalUtils.feedback.message = message;
+    instance.$global.modalUtils.feedback.message = toDisplayText(message);
     instance.$global.modalUtils.feedback.type = type;
     instance.$global.modalUtils.feedback.show = true;
     instance.$global.modalUtils.feedback.isClosing = false;
@@ -73,6 +81,52 @@ export default defineNuxtPlugin((nuxtApp) => {
       instance.$global.modalUtils.feedback.title = "";
       instance.$global.modalUtils.feedback.message = "";
     }, 400);
+  };
+
+  // Toasts (avisos não bloqueantes)
+  let toastSeq = 0;
+  const dismissToast = (id) => {
+    const items = nuxtApp.$global.toasts.items;
+    const index = items.findIndex((t) => t.id === id);
+    if (index >= 0) items.splice(index, 1);
+  };
+
+  const showToast = (instance, message, type = "info", duration = 6000) => {
+    const id = ++toastSeq;
+    nuxtApp.$global.toasts.items.push({ id, message: toDisplayText(message), type });
+    if (duration > 0) setTimeout(() => dismissToast(id), duration);
+    return id;
+  };
+
+  // Erro de requisição -> toast em linguagem amigável (sem despejar objetos).
+  const notifyError = (instance, error, fallback) => {
+    return showToast(instance, apiErrorMessage(error, fallback), "error");
+  };
+
+  // Diálogo de confirmação baseado em promessa (substitui window.confirm).
+  let confirmResolver = null;
+  const confirmDialog = ({
+    title = "Confirmar",
+    message = "",
+    confirmLabel = "Confirmar",
+    cancelLabel = "Cancelar",
+    danger = false,
+  } = {}) => {
+    if (confirmResolver) confirmResolver(false);
+    const state = nuxtApp.$global.confirmDialog;
+    Object.assign(state, { show: true, title, message, confirmLabel, cancelLabel, danger });
+    return new Promise((resolve) => {
+      confirmResolver = resolve;
+    });
+  };
+
+  const answerConfirm = (answer) => {
+    nuxtApp.$global.confirmDialog.show = false;
+    if (confirmResolver) {
+      const resolve = confirmResolver;
+      confirmResolver = null;
+      resolve(!!answer);
+    }
   };
 
   const closeModal = (instance, props = [], reload = false) => {
@@ -109,28 +163,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   //Métodos de manipulação de valores
-  const formatTel = (tel) => {
-    if (tel == null) return "";
-
-    const cleaned = tel.replace(/\D/g, "");
-
-    if (cleaned.length === 11) {
-      return cleaned.replace(/^(\d{2})(\d{1})(\d{4})(\d{4})$/, "($1) $2 $3-$4");
-    } else if (cleaned.length === 10) {
-      return cleaned.replace(/^(\d{2})(\d{4})(\d{4})$/, "($1) $2-$3");
-    }
-
-    return tel;
-  };
-
-  const returnCleanNumber = (number) => {
-    if (number == null) return "";
-
-    const cleaned = number.replace(/\D/g, "");
-
-    return cleaned;
-  };
-
   const formatTelInput = (event, tel) => {
     if (tel == null) return "";
 
@@ -185,123 +217,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     );
   };
 
-  const formatDate = (date) => {
-    return date.trim() != "" ? moment(date).format("DD/MM/YYYY") : "";
-  };
-
-  const formatHour = (date) => {
-    return date.trim() != "" ? moment(date).format("HH:mm") : "";
-  };
-
-  const formatDateFromDB = (date) => {
-    return date.trim() != "" ? moment(date).format("YYYY-MM-DD") : "";
-  };
-
-  const formatCpfFromDB = (cpf) => {
-    if (cpf == null) return "";
-
-    const cleaned = cpf.replace(/\D/g, "");
-
-    if (cleaned.length === 11) {
-      return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
-    }
-
-    return cpf;
-  };
-
-  const returnAge = (birthday) => {
-    const dataNasc = moment(birthday, "YYYY-MM-DD");
-    const hoje = moment();
-
-    // Calcula a diferença em anos
-    const anos = hoje.diff(dataNasc, "years");
-
-    // Retorna a idade formatada
-    return anos === 1 ? `${anos} Ano` : `${anos} Anos`;
-  };
-
-  const formatCurrency = (value) => {
-    if (isNaN(value)) return "Valor inválido";
-
-    return value.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
-  };
-
-  const returnFloatNumber = (string) => {
-    let cleaned = string
-      .toString()
-      .replace(/R\$\s?/g, "")
-      .trim();
-    if (cleaned.includes(',')) cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-    let formattedNumber = parseFloat(cleaned);
-
-    return formattedNumber.toFixed(2);
-  };
-
-  const capitalize = (str) => {
-    if (!str) return "";
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-  };
-
-  const formatMinutesToTime = (minutes) => {
-    const duration = moment.duration(minutes, "minutes");
-
-    // Calcula horas e minutos
-    const hours = Math.floor(duration.asHours());
-    const mins = duration.minutes();
-
-    // Formata como HH:mm
-    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}h`;
-  };
-
-  const formatDuration = (minutes) => {
-    if (!minutes || isNaN(minutes)) return "00:00"; // Retorna um valor padrão caso seja inválido
-
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-
-    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-  };
-
-  const sanitizeHtml = (str) => {
-    if (!str || (typeof str === "string" && str.trim() === "")) return "";
-
-    const allowedTags = ["b", "i", "p", "br"];
-    const regex = new RegExp(`<\/?(?!${allowedTags.join("|")})[^>]*>`, "gi");
-    const withBreaks = str.replace(/\n/g, "<br>");
-    const sanitized = withBreaks.replace(regex, "");
-
-    return sanitized;
-  };
-
   //Métodos validação
-
-  const isValidRoute = (path) => {
-    let routes = [
-      "/agenda",
-      "/vendas",
-      "/clientes",
-      "/relatorios",
-      "/agenda",
-      "/financeiro",
-      "/financeiro/pagamentos",
-      "/financeiro/servicos",
-      "/financeiro/metodos-pagamento",
-      "/configuracoes",
-      "/configuracoes/usuarios",
-      "/configuracoes/empresa",
-      "/configuracoes/cargos",
-      "/configuracoes/servicos",
-      "/configuracoes/produtos",
-      "/perfil",
-      "/empresa_entrar",
-      "/estoque",
-    ];
-
-    return routes.some((route) => route == path);
-  };
 
   const formCustomValidate = (instance) => {
     if ($(".custom-invalid[invalid='true']").length) {
@@ -323,6 +239,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   //Metodos autenticação
+  // A sessão é validada no boot (getUser) e, depois, só em respostas 401 (interceptor em utils/apiClient.js).
   const setJwtInLocalStorage = (instance, token) => {
     localStorage.setItem("agendaspro_jwt", token);
   };
@@ -333,77 +250,28 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const removeJwtFromLocalStorage = () => {
     localStorage.removeItem("agendaspro_jwt");
+    localStorage.removeItem("agendaspro_refresh_token");
   };
 
-  const checkIfUserIsAuthenticated = (instance, first = false) => {
-    return new Promise((resolve) => {
-      let pathName = window.location.pathname;
-      let jwt = "Bearer " + getJwtInLocalStorage();
-
-      if (jwt == "Bearer null") {
-        if (isValidRoute(pathName)) {
-          window.location.href = "/entrar";
-        }
-        return resolve(false);
-      } else {
-        let data = {
-          token: jwt,
-        };
-
-        instance.$base.api
-          .post("/users/check_jwt", data) // Se ja estiver logado no sistema e acessar a página de login, é checkado a valia do token JWT e então redirecionado para a index.
-          .then(function (res) {
-            setJwtInLocalStorage(instance, res.data.returnObj.newToken); // Setando o novo jwt que foi resetado
-            if (pathName == "/entrar") {
-              // Se o usuário estiver logado e entrar em login, o mesmo é logado novamente e direcionado para a index.
-
-              let loginForm = $("#login-form");
-              loginForm.find("input").attr("disabled", "disabled");
-              loginForm
-                .find("button")
-                .attr("disabled", "disabled")
-                .addClass("btn-loading");
-
-              setTimeout(() => {
-                window.location.href = "/agenda";
-              }, 1000);
-            }
-            resolve(true);
-          })
-          .catch(function () {
-            // Caso contrário ele é deslogado e enviado para login.
-            logoutUser();
-            resolve(false);
-          })
-          .then(function () {
-            // Chamada recursiva da função se o usuario estiver na home
-            if (isValidRoute(pathName) && first) {
-              setTimeout(() => {
-                checkIfUserIsAuthenticated(instance, first);
-              }, 10 * 1000);
-            }
-          });
-      }
-    });
+  // Guarda o resultado do login (jwtToken/token + refresh_token, se existir).
+  const storeLoginResponse = (instance, data) => {
+    return nuxtApp.$base.client.storeLoginResponse(data);
   };
 
-  const logoutUser = () => {
-    removeJwtFromLocalStorage();
-
+  const logoutUser = async () => {
+    try {
+      await nuxtApp.$base.client.logout();
+    } catch (e) {
+      removeJwtFromLocalStorage();
+    }
+    resetSession();
     window.location.href = "/entrar";
   };
 
   const enterCompanyWithToken = (instance, token, email) => {
-    return new Promise((resolve, reject) => {
-      instance.$base.api
-        .post("/companies/enter_company", { token: token, email: email })
-        .then(() => {
-          resolve();
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
+    return instance.$base.api
+      .post("/companies/enter_company", { token: token, email: email })
+      .then(() => undefined);
   };
 
   const checkAndSetJwt = (instance) => {
@@ -414,20 +282,63 @@ export default defineNuxtPlugin((nuxtApp) => {
     return Promise.resolve(true);
   };
 
+  // Sessão compartilhada: middleware e layout aguardam a mesma promessa.
+  // status: "ok" | "unauthenticated" | "no-company" | "error"
+  let sessionPromise = null;
+
+  const resetSession = () => {
+    sessionPromise = null;
+  };
+
+  const bootSession = async (instance) => {
+    if (!(await checkAndSetJwt(instance))) return { status: "unauthenticated" };
+
+    try {
+      await getUser(instance); // valida o token (e renova via 401, se preciso)
+    } catch (error) {
+      if (error && error.response && error.response.status === 401) {
+        removeJwtFromLocalStorage();
+        return { status: "unauthenticated" };
+      }
+      return { status: "error", error };
+    }
+
+    if (!instance.$global.selectedCompany.id) return { status: "no-company" };
+
+    try {
+      await Promise.all([
+        getUnitsOfMeasurement(instance),
+        returnBusinessTypes(instance),
+        getCompany(instance),
+      ]);
+    } catch (error) {
+      if (error && error.response && error.response.status === 401) {
+        removeJwtFromLocalStorage();
+        return { status: "unauthenticated" };
+      }
+      return { status: "error", error };
+    }
+
+    return { status: "ok" };
+  };
+
+  const ensureSession = (instance = nuxtApp, force = false) => {
+    if (!sessionPromise || force) {
+      const current = bootSession(instance).then((result) => {
+        // Só mantém em cache o sucesso; falhas são reavaliadas na próxima navegação.
+        if (result.status !== "ok" && sessionPromise === current) sessionPromise = null;
+        return result;
+      });
+      sessionPromise = current;
+    }
+    return sessionPromise;
+  };
+
+  // Compatibilidade: true se a sessão está pronta.
   const initSystem = async (instance) => {
-    if (!await checkAndSetJwt(instance)) {
-      window.location.href = '/entrar';
-      return false;
-    }
-    if (!await checkIfUserIsAuthenticated(instance, true)) return false;
-    await Promise.all([getUnitsOfMeasurement(instance), returnBusinessTypes(instance)]);
-    await getUser(instance);
-    if (!instance.$global.selectedCompany.id) {
-      window.location.href = '/criar-empresa';
-      return false;
-    }
-    await getCompany(instance);
-    return true;
+    const result = await ensureSession(instance);
+    if (result.status === "error") throw result.error || new Error("Falha ao iniciar o sistema");
+    return result.status === "ok";
   };
 
   //Métodos de retorno
@@ -437,26 +348,22 @@ export default defineNuxtPlugin((nuxtApp) => {
     Object.assign(instance.$global.business_types, { types: response.data.returnObj });
   };
 
-  const getAddressData = (cep) => {
-    return new Promise((resolve) => {
-      if (!/^\d{5}-?\d{3}$/.test(cep)) {
-        throw new Error("CEP inválido");
-      }
+  const getAddressData = async (cep) => {
+    if (!/^\d{5}-?\d{3}$/.test(cep)) {
+      throw new Error("CEP inválido");
+    }
 
-      fetch(`https://viacep.com.br/ws/${cep}/json/`).then((response) => {
-        if (!response.ok) {
-          throw new Error("Falha ao consultar o ViaCEP");
-        }
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    if (!response.ok) {
+      throw new Error("Falha ao consultar o CEP");
+    }
 
-        response.json().then((results) => {
-          if (results.erro) {
-            throw new Error("CEP não encontrado");
-          }
+    const results = await response.json();
+    if (results.erro) {
+      throw new Error("CEP não encontrado");
+    }
 
-          resolve(results);
-        });
-      });
-    });
+    return results;
   };
 
   const getCompany = async function (instance) {
@@ -497,7 +404,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   const hasPermission = function (instance) {
-    return instance.$global.user.permission == 1;
+    return isAdminUser(instance.$global.user);
   };
 
   nuxtApp.provide("myFunctions", {
@@ -514,25 +421,31 @@ export default defineNuxtPlugin((nuxtApp) => {
     formatDate,
     formatHour,
     formatDateFromDB,
-    formatCpfFromDB,
+    formatCpfFromDB: formatCpf,
     returnAge,
-    sanitizeHtml,
     formatCurrency,
     formatDuration,
     inputMoneyCheck,
     capitalize,
     formatMinutesToTime,
     returnFloatNumber,
+    errorMessage: apiErrorMessage,
+    notifyError,
+    showToast,
+    dismissToast,
+    confirmDialog,
+    answerConfirm,
     logoutUser,
     initSystem,
+    ensureSession,
+    resetSession,
     checkAndSetJwt,
+    storeLoginResponse,
     returnBusinessTypes,
     enterCompanyWithToken,
-    checkIfUserIsAuthenticated,
     removeJwtFromLocalStorage,
     getJwtInLocalStorage,
     setJwtInLocalStorage,
-    isValidRoute,
     getAddressData,
     getCompany,
     getUser,

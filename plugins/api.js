@@ -1,52 +1,26 @@
 import axios from 'axios';
-import { reactive } from 'vue';
+import { createApiClient } from '../utils/apiClient.js';
 
+// Adaptador fino: toda a lógica (refresh com trava, tolerância a contratos) vive em utils/apiClient.js.
 export default defineNuxtPlugin((nuxtApp) => {
     const url_api = useRuntimeConfig().public.apiBase;
 
-    const api = axios.create({
+    const client = createApiClient({
+        axios,
         baseURL: url_api,
-        timeout: 15000
-    })
-
-    api.interceptors.response.use(
-        (response) => {
-            return response;
-        },
-        async (error) => {
-            const originalRequest = error.config;
-
-            if (error.response && error.response.status === 401 && !originalRequest._retry) {
-                originalRequest._retry = true;
-
-                try {
-                    const currentToken = localStorage.getItem("agendaspro_jwt");
-
-                    const { data } = await axios.post(`${url_api}/users/check_jwt`, {
-                        token: `Bearer ${currentToken}`
-                    });
-
-                    const newToken = data.returnObj.newToken;
-
-                    localStorage.setItem("agendaspro_jwt", newToken);
-                    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-
-                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-
-                    return api(originalRequest);
-                } catch (refreshError) {
-                    localStorage.removeItem("agendaspro_jwt");
-                    window.location.href = "/entrar";
-                    return Promise.reject(refreshError);
-                }
-            }
-
-            return Promise.reject(error);
+        storage: localStorage,
+        onSessionExpired: () => {
+            // Nunca redireciona se já estiver numa rota pública (evita loop em /entrar).
+            const route = nuxtApp.$router.currentRoute.value;
+            const access = route.meta && route.meta.access;
+            if (access === 'public' || access === 'guest') return;
+            nuxtApp.$myFunctions.resetSession();
+            navigateTo('/entrar');
         }
-    );
+    });
 
     nuxtApp.provide('base', {
-        api
+        api: client.api,
+        client
     });
-  });
-
+});

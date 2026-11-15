@@ -2,20 +2,23 @@
     <div class="modal flex items-center justify-center" v-if="$global.modalUtils.feedback.show"
         :class="showModal ? 'show' : ''">
         <div class="modal-wrapper" v-on:click="closeFeedback()"></div>
-        <div class="modal-container">
+        <div class="modal-container" ref="dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-title"
+            aria-describedby="feedback-message" tabindex="-1">
 
             <div class="modal-header flex justify-between items-center border-b border-gray-200 pb-3">
-                <p class="fontsize-lg-bold preto m-0">{{ $global.modalUtils.feedback.title }}</p>
-                <font-awesome icon="times" v-on:click="closeFeedback()" class="cursor-pointer cinza" />
+                <p class="fontsize-lg-bold preto m-0" id="feedback-title">{{ $global.modalUtils.feedback.title }}</p>
+                <button type="button" class="icon-btn cinza" aria-label="Fechar" v-on:click="closeFeedback()">
+                    <font-awesome icon="times" aria-hidden="true" />
+                </button>
             </div>
 
             <div class="modal-body flex flex-col items-center justify-center py-6">
-                <font-awesome v-if="type === 'success'" icon="check-circle" class="feedback-icon text-green-500 mb-4" />
-                <font-awesome v-if="type === 'error'" icon="times-circle" class="feedback-icon text-red-500 mb-4" />
-                <font-awesome v-if="type === 'warning'" icon="exclamation-triangle"
+                <font-awesome v-if="type === 'success'" icon="circle-check" class="feedback-icon text-green-500 mb-4" />
+                <font-awesome v-if="type === 'error'" icon="circle-xmark" class="feedback-icon text-red-500 mb-4" />
+                <font-awesome v-if="type === 'warning'" icon="triangle-exclamation"
                     class="feedback-icon text-yellow-500 mb-4" />
 
-                <p class="fontsize-md cinza text-center m-0">{{ $global.modalUtils.feedback.message }}</p>
+                <p class="fontsize-md cinza text-center m-0 feedback-message" id="feedback-message">{{ $global.modalUtils.feedback.message }}</p>
             </div>
 
             <div class="modal-footer flex justify-end border-t border-gray-200 pt-3">
@@ -27,7 +30,10 @@
 </template>
 
 <script>
+import { dialogA11y } from '../../utils/dialogA11y.js';
+
 export default {
+    mixins: [dialogA11y],
     data() {
         return {
             showModal: false
@@ -42,8 +48,10 @@ export default {
         "$global.modalUtils.feedback.show": function (val) {
             if (val) {
                 setTimeout(() => { this.showModal = true; }, 50);
+                this.$nextTick(() => this.activateDialog(this.$refs.dialog, () => this.closeFeedback()));
             } else {
                 this.showModal = false;
+                this.deactivateDialog();
             }
         },
         "$global.modalUtils.feedback.isClosing": function (isClosing) {
@@ -112,6 +120,10 @@ export default {
 .modal-footer button {
     width: 100%;
     max-width: 100%;
+}
+
+.feedback-message {
+    white-space: pre-line;
 }
 
 .feedback-icon {

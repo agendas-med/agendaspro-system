@@ -20,8 +20,8 @@
             <UtilsSwitch v-if="showLembrar" label="Lembrar-me" @changedState="lembrar = $event" style="margin-top: var(--space-3);" />
           </div>
         </div>
-        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="loading" @eraseError="$myFunctions.resetResponse(this)" />
-        <button type="submit" class="btn btn-primary">Entrar</button>
+        <UtilsLoadingResponse :msg="response" :type="responseType" :loading="loading" @eraseError="$myFunctions.resetResponse($.proxy)" />
+        <button type="submit" class="btn btn-primary" :disabled="loading">Entrar</button>
       </form>
       <div class="or-separator">
         <span class="fontsize-sm preto">ou</span>
@@ -33,7 +33,6 @@
   <script>
 
   export default {
-    layout: 'entrar',
     data() {
       return {
         email: "",
@@ -58,12 +57,11 @@
       let localStorageEmail = localStorage.getItem("email");
 
       if (localStorageEmail) this.email = localStorageEmail;
-      
-      this.$myFunctions.checkIfUserIsAuthenticated(this);
+      // O redirecionamento de quem já está logado é feito pelo middleware (access: 'guest').
     },
     methods: {
       handleGoogleResponse: function (response) {
-        this.$myFunctions.setResponse(self, response.msg, response.type);
+        this.$myFunctions.setResponse(this, response.msg, response.type);
       },
       login: function () {
         let self = this;
@@ -76,16 +74,22 @@
 
         this.$base.api.post("/users/login", data)
         .then(function(response2){            
-          self.$myFunctions.setJwtInLocalStorage(self, response2.data.returnObj.jwtToken);
-          self.$myFunctions.setResponse(self, response2.data.message, "success");
+          self.$myFunctions.storeLoginResponse(self, response2.data);
+          self.$myFunctions.setResponse(self, response2.data.message || "Login realizado com sucesso", "success");
 
           if (self.lembrar) {
             localStorage.setItem("email", self.email);
           }
 
           window.location.href = "/agenda";
-        }).catch(() => {
-          self.$myFunctions.setResponse(self, "Falha na autenticação", "error");
+        }).catch((error) => {
+          const status = error && error.response && error.response.status;
+          const fallback = "Falha na autenticação";
+          // 401/400 = credenciais; demais casos (rede, 5xx, 429) ganham mensagem própria.
+          const msg = (status === 401 || status === 400 || status === 403)
+            ? fallback
+            : self.$myFunctions.errorMessage(error, fallback);
+          self.$myFunctions.setResponse(self, msg, "error");
         }).then(() => {
           self.loading = false;
         })
@@ -104,3 +108,7 @@
     }
   }
 </style>
+
+<script setup>
+definePageMeta({ layout: 'login', access: 'guest', title: 'Entrar' })
+</script>

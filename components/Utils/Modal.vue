@@ -2,11 +2,13 @@
     <div class="modal flex items-center justify-center" v-if="$global.modalUtils.modalTitle != ''"
         :class="showModal ? 'show' : ''">
         <div class="modal-wrapper" v-on:click="closeModal()"></div>
-        <div class="modal-container"
+        <div class="modal-container" ref="dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
             :style="($global.modalUtils.modalTitle.indexOf('Confirmar') != -1 || $global.modalUtils.modalTitle.indexOf('Excluir') != -1) ? 'height: 35vh; min-height: 280px;' : ''">
             <div class="modal-header flex justify-between items-center">
-                <p class="fontsize-lg preto">{{ $global.modalUtils.modalTitle }}</p>
-                <font-awesome icon="times" v-on:click="closeModal()" class="cursor-pointer" />
+                <p class="fontsize-lg preto" id="modal-title">{{ $global.modalUtils.modalTitle }}</p>
+                <button type="button" class="icon-btn" aria-label="Fechar" v-on:click="closeModal()">
+                    <font-awesome icon="times" aria-hidden="true" />
+                </button>
             </div>
             <div class="modal-body">
                 <div
@@ -42,7 +44,10 @@
     </div>
 </template>
 <script>
+import { dialogA11y } from '../../utils/dialogA11y.js';
+
 export default {
+    mixins: [dialogA11y],
     emits: ["excluded", "closeModal", "confirm"],
     props: ["excludepath"],
     data() {
@@ -56,8 +61,10 @@ export default {
                 setTimeout(() => {
                     this.showModal = true;
                 }, 100)
+                this.$nextTick(() => this.activateDialog(this.$refs.dialog, () => this.closeModal()));
             } else {
                 this.showModal = false;
+                this.deactivateDialog();
             }
         },
         "$global.modalUtils.isClosing": function (isClosing) {

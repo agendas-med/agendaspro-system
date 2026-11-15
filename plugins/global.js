@@ -94,6 +94,20 @@ export default defineNuxtPlugin((nuxtApp) => {
         invalidForm: false
     })
 
+    // Avisos não bloqueantes (toasts) e diálogo de confirmação (substitui window.confirm)
+    let toasts = reactive({
+        items: []
+    })
+
+    let confirmDialog = reactive({
+        show: false,
+        title: "",
+        message: "",
+        confirmLabel: "Confirmar",
+        cancelLabel: "Cancelar",
+        danger: false
+    })
+
     let selectedCompany = reactive({
         id: 0
     });
@@ -166,7 +180,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         business_types,
         durations,
         modalUtils,
-        screenUtils
+        screenUtils,
+        toasts,
+        confirmDialog
     });
   });
   

@@ -1,6 +1,6 @@
 <template>
     <div class="badge" :style="'background: ' + background">
-        <h3 :style="'color: ' + getContrastColorFromCssVariable(background)" v-html="text"></h3>
+        <h3 :style="'color: ' + getContrastColorFromCssVariable(background)" >{{ text }}</h3>
     </div>
 </template>
 <script>
@@ -14,6 +14,7 @@ export default {
             $tempElement.remove();
 
             let hexColor = this.rgbToHex(computedColor);
+            if (!hexColor) return "#000000";
             let contrastColor = this.calculateContrastColor(hexColor);
 
             return contrastColor;
