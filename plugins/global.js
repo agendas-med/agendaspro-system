@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { emptyUpgradePrompt } from '../utils/planErrors.js';
 
 export default defineNuxtPlugin((nuxtApp) => {
     let contentObject = reactive({
@@ -108,6 +109,10 @@ export default defineNuxtPlugin((nuxtApp) => {
         danger: false
     })
 
+    // 402 plan_upgrade_required: modal global de upgrade (UtilsUpgradeModal). handledError evita aviso duplicado.
+    let upgradePrompt = reactive(emptyUpgradePrompt())
+    let handledError = { at: 0, message: "" }
+
     let selectedCompany = reactive({
         id: 0
     });
@@ -182,7 +187,9 @@ export default defineNuxtPlugin((nuxtApp) => {
         modalUtils,
         screenUtils,
         toasts,
-        confirmDialog
+        confirmDialog,
+        upgradePrompt,
+        handledError
     });
   });
   

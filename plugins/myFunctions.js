@@ -4,6 +4,9 @@ import {
 } from "../utils/format.js";
 import { apiErrorMessage, toDisplayText } from "../utils/errors.js";
 import { isAdminUser } from "../utils/access.js";
+import { isAlreadyHandled } from "../utils/planErrors.js";
+import { resolveFileUrl } from "../utils/files.js";
+import { formatCents, formatBps } from "../utils/money.js";
 
 export default defineNuxtPlugin((nuxtApp) => {
   // Métodos de resposta
@@ -67,6 +70,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   const showFeedbackModal = (instance, title, message, type = "success") => {
+    // 402/503 já tratados pelo interceptor (modal de upgrade/toast): não duplica o aviso.
+    if (type === "error" && isAlreadyHandled(nuxtApp.$global.handledError, toDisplayText(message))) return;
     instance.$global.modalUtils.feedback.title = title;
     instance.$global.modalUtils.feedback.message = toDisplayText(message);
     instance.$global.modalUtils.feedback.type = type;
@@ -100,6 +105,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Erro de requisição -> toast em linguagem amigável (sem despejar objetos).
   const notifyError = (instance, error, fallback) => {
+    if (error && error.handledGlobally) return null;
     return showToast(instance, apiErrorMessage(error, fallback), "error");
   };
 
@@ -403,6 +409,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     instance.$global.unitsOfMeasurement = response.data.returnObj;
   };
 
+  // URL de imagem/arquivo vinda da API: /public -> /static, /files/s3/<chave> como veio, relativa -> base da API.
+  const fileUrl = (url) => resolveFileUrl(url, useRuntimeConfig().public.apiBase);
+
   const hasPermission = function (instance) {
     return isAdminUser(instance.$global.user);
   };
@@ -425,6 +434,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     returnAge,
     formatCurrency,
     formatDuration,
+    formatCents,
+    formatBps,
+    fileUrl,
     inputMoneyCheck,
     capitalize,
     formatMinutesToTime,

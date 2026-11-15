@@ -6,6 +6,7 @@
     </NuxtLayout>
     <UtilsFeedbackModal />
     <UtilsConfirmDialog />
+    <UtilsUpgradeModal />
     <UtilsToast />
   </div>
 </template>

@@ -7,6 +7,9 @@
 //  - Legado: sem refresh_token, a renovação é POST /users/check_jwt { token: "Bearer <jwt>" }
 //          e o novo JWT vem em returnObj.newToken.
 import { apiErrorMessage } from "./errors.js";
+import {
+  isPlanUpgradeError, isBillingDisabledError, planUpgradeInfo, BILLING_DISABLED_MESSAGE,
+} from "./planErrors.js";
 
 export const TOKEN_KEY = "agendaspro_jwt";
 export const REFRESH_KEY = "agendaspro_refresh_token";
@@ -52,6 +55,10 @@ export function createApiClient({
   adapter,
   refreshPath = REFRESH_PATH,
   onSessionExpired,
+  // 402 plan_upgrade_required -> onPlanUpgradeRequired(info, error); 503 billing_disabled -> onBillingDisabled(error).
+  // Quando o erro é tratado globalmente, error.handledGlobally = true (telas evitam mensagem duplicada).
+  onPlanUpgradeRequired,
+  onBillingDisabled,
 }) {
   const config = { baseURL, timeout };
   if (adapter) config.adapter = adapter;
@@ -137,6 +144,24 @@ export function createApiClient({
     async (error) => {
       const original = error && error.config;
       if (error) error.friendlyMessage = apiErrorMessage(error);
+
+      if (isPlanUpgradeError(error)) {
+        error.planUpgrade = planUpgradeInfo(error);
+        error.friendlyMessage = error.planUpgrade.message;
+        if (onPlanUpgradeRequired) {
+          error.handledGlobally = true;
+          try { onPlanUpgradeRequired(error.planUpgrade, error); } catch (e) { /* UI nunca derruba a requisição */ }
+        }
+        return Promise.reject(error);
+      }
+      if (isBillingDisabledError(error)) {
+        error.friendlyMessage = BILLING_DISABLED_MESSAGE;
+        if (onBillingDisabled) {
+          error.handledGlobally = true;
+          try { onBillingDisabled(error); } catch (e) { /* idem */ }
+        }
+        return Promise.reject(error);
+      }
 
       const status = error && error.response && error.response.status;
       if (status !== 401 || !original || original._retry || isAuthUrl(original.url)) {
