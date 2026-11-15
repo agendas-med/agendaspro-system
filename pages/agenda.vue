@@ -18,6 +18,16 @@
         </button>
       </div>
     </div>
+    <div class="professional-filter" v-if="professionals.length">
+      <label for="professional-filter">Profissional</label>
+      <select id="professional-filter" v-model="professionalFilter">
+        <option value="all">Todos os profissionais</option>
+        <option v-for="professional in professionals" :key="professional.id" :value="professional.id">
+          {{ professional.name }}{{ professional.active ? "" : " (inativo)" }}
+        </option>
+        <option value="none">Sem profissional definido</option>
+      </select>
+    </div>
     <div class="legendas">
       <div class="pendente">Aguard. Pagamento</div>
       <div class="agendado">Agendado</div>
@@ -25,7 +35,7 @@
       <div class="realizado">Realizado</div>
       <div class="cancelado">Cancelado</div>
     </div>
-    <FullCalendar ref="fullCalendar" :options="calendarOptions" v-if="!reload" />
+    <FullCalendar ref="fullCalendar" :options="calendarOptions" v-if="!reload && timezoneReady" />
     <UtilsModal @closeModal="$myFunctions.closeModal($.proxy, ['eventId'])">
       <ModalContentAgenda :event="selectedEvent" @savedContent="$myFunctions.closeModal($.proxy); getEvents(true);" />
     </UtilsModal>
@@ -41,6 +51,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import ptLocale from '@fullcalendar/core/locales/pt-br';
 import { toBusinessHours } from '../utils/format.js';
+import { unwrap, professionalsById, filterEventsByProfessional, buildAppointmentPayload, DEFAULT_TIMEZONE } from '../utils/payloads.js';
 
 const PERIODS = [
   { view: "dayGridMonth", label: "Mensal" },
@@ -66,6 +77,10 @@ export default {
       draggingEventId: "",
       eventId: "",
       responsive: false,
+      professionals: [],
+      professionalFilter: "all",
+      timezone: DEFAULT_TIMEZONE,
+      timezoneReady: false,
       selectedEvent: {
         customer_id: null,
         customer_name: "",
@@ -100,7 +115,7 @@ export default {
         events: this.calendarEvents,
         nowIndicator: true,
         dayMaxEventRows: true,
-        timeZone: "America/Sao_Paulo",
+        timeZone: this.timezone,
         eventClick: this.eventClick,
         height: "calc(100vh - 218px)",
         editable: true,
@@ -123,7 +138,15 @@ export default {
       }
     }
   },
+  watch: {
+    professionalFilter: function () {
+      this.applyEvents();
+    }
+  },
   mounted: function () {
+    this.loadProfessionals();
+    this.loadTimezone();
+
     // Só recria o calendário no boot se for tela pequena (visão em lista); caso contrário usa o padrão.
     if (window.innerWidth < 480) this.resizeCalendar(true);
 
@@ -133,6 +156,25 @@ export default {
     window.removeEventListener("resize", this.resizeCalendar);
   },
   methods: {
+    // Fuso da empresa (GET /companies/timezone). Falhou? Usa o padrão e segue: a agenda não pode ficar bloqueada.
+    loadTimezone: function () {
+      this.$base.api.get("/companies/timezone").then((response) => {
+        const data = response.data.returnObj || {};
+        this.timezone = data.effective || data.timezone || DEFAULT_TIMEZONE;
+      }).catch(() => {
+        this.timezone = DEFAULT_TIMEZONE;
+      }).then(() => {
+        this.timezoneReady = true;
+      });
+    },
+    loadProfessionals: function () {
+      this.$base.api.get("/professionals", { params: { include_inactive: true } }).then((response) => {
+        this.professionals = unwrap(response) || [];
+        this.applyEvents();
+      }).catch(() => {
+        this.professionals = [];
+      });
+    },
     goToday: function () {
       if (this.calendarApi) this.calendarApi.today();
     },
@@ -164,14 +206,24 @@ export default {
           if (seq !== this.requestSeq) return; // resposta de um intervalo antigo
 
           this.rawEvents = response.data.returnObj || [];
-          this.calendarEvents = this.rawEvents
-            .filter((event) => this.overlapsRange(event, range))
-            .map((event) => this.decorateEvent(event));
+          this.applyEvents();
         })
         .catch((error) => {
           if (seq === this.requestSeq) this.lastRangeKey = ""; // permite tentar de novo
           this.$myFunctions.notifyError(this, error, "Não foi possível carregar os agendamentos");
         });
+    },
+    // Recalcula os eventos do calendário a partir do que foi carregado (intervalo + filtro de profissional).
+    // O core ainda não filtra por profissional no GET /appointments: o filtro é feito aqui.
+    applyEvents: function () {
+      const range = this.range;
+      if (!range) return;
+
+      const visible = this.rawEvents.filter((event) => this.overlapsRange(event, range));
+      const filtered = filterEventsByProfessional(visible, this.professionalFilter);
+      const byId = professionalsById(this.professionals);
+
+      this.calendarEvents = filtered.map((event) => this.decorateEvent({ ...event }, byId));
     },
     overlapsRange: function (event, range) {
       const start = moment(event.start || event.date);
@@ -181,7 +233,7 @@ export default {
 
       return start.isBefore(moment(range.end)) && end.isSameOrAfter(moment(range.start));
     },
-    decorateEvent: function (event) {
+    decorateEvent: function (event, professionalsMap = {}) {
       let statusColor = "var(--verde)";
       if (event.status === "pendente_pagamento") {
         statusColor = "#f97316";
@@ -195,6 +247,14 @@ export default {
 
       event["displayEventEnd"] = true;
       event["color"] = statusColor;
+
+      // A cor do status continua no fundo; a cor do profissional marca a borda e o nome entra no título.
+      const professional = event.professional_id != null ? professionalsMap[event.professional_id] : null;
+      if (professional) {
+        if (/^#[0-9a-fA-F]{6}$/.test(professional.color || "")) event["borderColor"] = professional.color;
+        event["professional_name"] = professional.name;
+        if (this.professionalFilter === "all" && event.title) event["title"] = event.title + " · " + professional.name;
+      }
 
       return event;
     },
@@ -263,21 +323,12 @@ export default {
         ? totalServiceDuration
         : calculatedDuration;
 
-      const updatedEvent = {
-        customer_id: event.customer_id,
-        customer_name: event.customer_name,
+      // Lista branca de campos; professional_id é omitido de propósito (no PATCH, omitir mantém o profissional atual).
+      const updatedEvent = buildAppointmentPayload({
+        ...event,
         date: start.format("YYYY-MM-DD HH:mm:ss"),
-        duration: finalDuration.toString(),
-        observations: event.observations,
-        services: event.services,
-        status: event.status,
-        zip_code: event.zip_code,
-        address: event.address,
-        number: event.number,
-        complement: event.complement,
-        city: event.city,
-        state: event.state
-      };
+        duration: finalDuration
+      });
 
       this.$base.api.patch(`/appointments/${event.id}`, updatedEvent)
         .then(() => {
@@ -305,7 +356,9 @@ export default {
         services: [],
         date: date,
         duration: "",
-        observations: ""
+        observations: "",
+        // Com um profissional filtrado, o novo agendamento já nasce para ele.
+        professional_id: typeof this.professionalFilter === "number" ? this.professionalFilter : null
       }
 
       this.$myFunctions.openModal({
@@ -374,6 +427,19 @@ export default {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--cinza-medio);
+}
+
+.professional-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.professional-filter select {
+  width: auto;
+  max-width: 100%;
+  min-width: 220px;
 }
 
 .legendas {

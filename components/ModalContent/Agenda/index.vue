@@ -36,6 +36,16 @@
                     </select>
                 </div>
             </div>
+            <div class="input-group" v-if="professionalOptions.length">
+                <label for="professional">Profissional <span class="optional">(opcional)</span></label>
+                <select id="professional" v-model="professionalId">
+                    <option value="">Sem profissional definido</option>
+                    <option v-for="professional in professionalOptions" :key="professional.id" :value="professional.id"
+                        :disabled="!professional.active">
+                        {{ professional.name }}{{ professional.active ? "" : " (inativo)" }}
+                    </option>
+                </select>
+            </div>
             <div class="input-group">
                 <label for="status">Status</label>
                 <select id="status" v-model="agendamento.status" required>
@@ -105,13 +115,24 @@
 
 </template>
 <script>
+import { buildAppointmentPayload, unwrap } from '../../../utils/payloads.js';
+
 export default {
     emits: ["savedContent"],
     data() {
+        const current = this.$global.contentObject || {};
+        const originalProfessionalId = current.professional_id == null ? "" : current.professional_id;
+
         return {
             invalidForm: true,
-            durations: JSON.parse(JSON.stringify(this.$global.durations))
+            durations: JSON.parse(JSON.stringify(this.$global.durations)),
+            professionals: [],
+            originalProfessionalId,
+            professionalId: originalProfessionalId
         }
+    },
+    mounted() {
+        this.loadProfessionals();
     },
     watch: {
         'agendamento.services': {
@@ -190,9 +211,29 @@ export default {
         },
         needsAddress() {
             return this.servicesRequiringLocation.length > 0;
+        },
+        // Ativos + o profissional já gravado no agendamento (mesmo inativo, para não perder o vínculo ao editar).
+        professionalOptions() {
+            return this.professionals.filter((p) => p.active || p.id === this.originalProfessionalId);
         }
     },
     methods: {
+        loadProfessionals() {
+            this.$base.api.get("/professionals", { params: { include_inactive: true } }).then((response) => {
+                this.professionals = unwrap(response) || [];
+            }).catch(() => {
+                // Sem a lista, o agendamento segue sem profissional (comportamento anterior).
+                this.professionals = [];
+            });
+        },
+        // Criação: envia só se escolhido. Edição: envia só se mudou (omitir mantém o atual no core).
+        professionalForPayload() {
+            const selected = this.professionalId === "" ? null : this.professionalId;
+            if (this.agendamento.id) {
+                return selected === (this.originalProfessionalId === "" ? null : this.originalProfessionalId) ? undefined : selected;
+            }
+            return selected === null ? undefined : selected;
+        },
         formatUnitLabel(unit, quantity) {
             const qty = quantity || 1;
             const isPlural = qty > 1;
@@ -258,21 +299,8 @@ export default {
 
             this.agendamento.duration = this.agendamento.duration.toString();
 
-            let data = {
-                customer_id: this.agendamento.customer_id,
-                customer_name: this.agendamento.customer_name,
-                date: this.agendamento.date,
-                duration: this.agendamento.duration,
-                observations: this.agendamento.observations,
-                services: this.agendamento.services,
-                status: this.agendamento.status,
-                zip_code: this.agendamento.zip_code,
-                address: this.agendamento.address,
-                number: this.agendamento.number,
-                complement: this.agendamento.complement,
-                city: this.agendamento.city,
-                state: this.agendamento.state
-            }
+            // Lista branca de campos (o core rejeita campos desconhecidos); professional_id só quando necessário.
+            const data = buildAppointmentPayload(this.agendamento, { professionalId: this.professionalForPayload() });
 
             if (this.agendamento.id) {
                 promise = this.updateSchedule(data);
