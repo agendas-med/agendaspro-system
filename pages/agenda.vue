@@ -51,7 +51,10 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import ptLocale from '@fullcalendar/core/locales/pt-br';
 import { toBusinessHours } from '../utils/format.js';
-import { unwrap, professionalsById, filterEventsByProfessional, buildAppointmentPayload, DEFAULT_TIMEZONE } from '../utils/payloads.js';
+import {
+  unwrap, professionalsById, filterEventsByProfessional, buildAppointmentPayload, DEFAULT_TIMEZONE,
+  wallClock, wallMinutesBetween, presetProfessionalId,
+} from '../utils/payloads.js';
 
 const PERIODS = [
   { view: "dayGridMonth", label: "Mensal" },
@@ -307,11 +310,10 @@ export default {
       this.updateThisEvent(event);
     },
     updateThisEvent: function (event) {
-      const start = moment(event.start);
-      const end = moment(event.end);
-
-      // Diferença entre start e end em minutos
-      const calculatedDuration = end.diff(start, "minutes");
+      // O calendário roda no fuso da empresa: usa a hora de parede da string (moment(...) converteria
+      // para o fuso do navegador e gravaria a hora errada quando os dois fusos diferem).
+      const startWall = wallClock(event.start);
+      const calculatedDuration = event.end ? wallMinutesBetween(event.start, event.end) : 0;
 
       // Soma das durations dos serviços
       const totalServiceDuration = (event.services || []).reduce((total, service) => {
@@ -326,8 +328,8 @@ export default {
       // Lista branca de campos; professional_id é omitido de propósito (no PATCH, omitir mantém o profissional atual).
       const updatedEvent = buildAppointmentPayload({
         ...event,
-        date: start.format("YYYY-MM-DD HH:mm:ss"),
-        duration: finalDuration
+        date: startWall,
+        duration: Number.isNaN(finalDuration) ? totalServiceDuration : finalDuration
       });
 
       this.$base.api.patch(`/appointments/${event.id}`, updatedEvent)
@@ -358,7 +360,7 @@ export default {
         duration: "",
         observations: "",
         // Com um profissional filtrado, o novo agendamento já nasce para ele.
-        professional_id: typeof this.professionalFilter === "number" ? this.professionalFilter : null
+        professional_id: presetProfessionalId(this.professionalFilter, this.professionals)
       }
 
       this.$myFunctions.openModal({

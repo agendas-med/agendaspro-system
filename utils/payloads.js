@@ -55,9 +55,15 @@ export function timeToMinutes(time) {
   return h * 60 + m;
 }
 
-// Fim "00:00" depois de um início significa meia-noite do mesmo dia ("24:00" para o core).
+// <input type="time"> não representa "24:00": o fim "00:00" significa meia-noite do mesmo dia
+// ("24:00" para o core). Início 00:00 + fim 00:00 = dia inteiro.
 export function normalizeEndTime(start, end) {
-  return end === "00:00" && start && start !== "00:00" ? "24:00" : end;
+  return end === "00:00" && start ? "24:00" : end;
+}
+
+// Inverso, para exibir no <input type="time">.
+export function displayEndTime(end) {
+  return end === "24:00" ? "00:00" : end;
 }
 
 // { weekday: [{start_time, end_time}] } a partir da lista da API.
@@ -67,7 +73,10 @@ export function rulesToWeek(rules) {
   for (const rule of Array.isArray(rules) ? rules : []) {
     const weekday = Number(rule.weekday);
     if (!week[weekday]) continue;
-    week[weekday].push({ start_time: String(rule.start_time).slice(0, 5), end_time: String(rule.end_time).slice(0, 5) });
+    week[weekday].push({
+      start_time: String(rule.start_time).slice(0, 5),
+      end_time: displayEndTime(String(rule.end_time).slice(0, 5)),
+    });
   }
   for (const day of Object.keys(week)) week[day].sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
   return week;
@@ -159,6 +168,13 @@ export function buildTimeBlockPayload({ scope, allDay, date, startsAt, endsAt, r
   return { payload };
 }
 
+// "2027-03-07 09:00" -> "07/03/2027 09:00". O core devolve hora de parede da empresa:
+// não converte fuso (nem para o do navegador).
+export function formatWall(value) {
+  const m = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : String(value || "");
+}
+
 // Intervalo de consulta de bloqueios (precisa de hora: YYYY-MM-DD HH:mm).
 export function timeBlocksParams({ from, to } = {}) {
   const params = {};
@@ -203,6 +219,52 @@ export function buildAppointmentPayload(source, { professionalId } = {}) {
   if (professionalId !== undefined) {
     payload.professional_id = professionalId === null || professionalId === "" ? null : Number(professionalId);
   }
+  return payload;
+}
+
+// Hora de parede de uma string ISO ("2027-03-07T09:00:00-03:00", "2027-03-07 09:00") como
+// "YYYY-MM-DD HH:mm:ss", sem converter para o fuso do navegador. Vazio se não reconhecer.
+export function wallClock(value) {
+  const m = String(value || "").match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+  return m ? `${m[1]} ${m[2]}:${m[3] || "00"}` : "";
+}
+
+// Minutos entre duas horas de parede (calculado em UTC: sem efeito de DST/fuso do navegador).
+export function wallMinutesBetween(start, end) {
+  const toMs = (value) => {
+    const m = wallClock(value).match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : NaN;
+  };
+  return Math.round((toMs(end) - toMs(start)) / 60000);
+}
+
+// Decide o professional_id do payload de agendamento.
+// undefined = não envia (criação sem escolha; edição sem mudança: omitir mantém o atual no core).
+// null = remover o profissional (só edição); número = profissional.
+export function professionalIdForPayload({ isEdit, selected, original }) {
+  const norm = (v) => (v === "" || v === undefined || v === null ? null : Number(v));
+  const current = norm(selected);
+  if (isEdit) return current === norm(original) ? undefined : current;
+  return current === null ? undefined : current;
+}
+
+// Novo agendamento nasce para o profissional filtrado, se ele existir e estiver ativo.
+export function presetProfessionalId(filter, professionals) {
+  if (typeof filter !== "number") return null;
+  const found = (Array.isArray(professionals) ? professionals : []).find((p) => p.id === filter);
+  return found && found.active ? found.id : null;
+}
+
+// ---- Empresa ----
+const COMPANY_KEYS = [
+  "id", "products", "services", "configurations", "name", "address", "zip_code", "city", "state",
+  "business_type", "roles", "asaas_status",
+];
+
+// PATCH /companies/:id: o core rejeita campos desconhecidos e o objeto global da empresa tem outros.
+export function buildCompanyPayload(company) {
+  const payload = {};
+  for (const key of COMPANY_KEYS) if (company && company[key] !== undefined) payload[key] = company[key];
   return payload;
 }
 

@@ -97,6 +97,8 @@
 </template>
 
 <script>
+import { buildCompanyPayload } from '../../utils/payloads.js';
+
 export default {
     data() {
         return {
@@ -153,7 +155,7 @@ export default {
 
             this.loading = true;
 
-            self.$base.api.patch("/companies/" + self.company.id, self.company)
+            self.$base.api.patch("/companies/" + self.company.id, buildCompanyPayload(self.company))
                 .then(function (response) {
                     self.$myFunctions.setResponse(self, response.data.message, "success");
                 }).catch((error) => {

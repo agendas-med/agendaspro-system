@@ -3,7 +3,62 @@ import {
   unwrap, buildProfessionalPayload, rulesToWeek, validateWeek, buildRulesPayload, timeToMinutes,
   normalizeEndTime, buildTimeBlockPayload, timeBlocksParams, buildSubscriptionPayload,
   buildAppointmentPayload, filterEventsByProfessional, toWallTime,
+  formatWall, wallClock, wallMinutesBetween, professionalIdForPayload, presetProfessionalId, buildCompanyPayload,
 } from "../utils/payloads.js";
+
+describe("hora de parede (fuso da empresa)", () => {
+  it("wallClock ignora o offset e não converte para o fuso do navegador", () => {
+    expect(wallClock("2027-03-07T09:00:00-03:00")).toBe("2027-03-07 09:00:00");
+    expect(wallClock("2027-03-07 09:30")).toBe("2027-03-07 09:30:00");
+    expect(wallClock("2027-03-07T09:00:00Z")).toBe("2027-03-07 09:00:00");
+    expect(wallClock("lixo")).toBe("");
+  });
+  it("wallMinutesBetween usa só a hora de parede", () => {
+    expect(wallMinutesBetween("2027-03-07T09:00:00-03:00", "2027-03-07T10:30:00-03:00")).toBe(90);
+    expect(wallMinutesBetween("2027-03-07T23:30:00", "2027-03-08T00:15:00")).toBe(45);
+    expect(wallMinutesBetween("x", "2027-03-08T00:15:00")).toBeNaN();
+  });
+  it("formatWall mostra a data como veio do core", () => {
+    expect(formatWall("2027-03-07 09:00")).toBe("07/03/2027 09:00");
+    expect(formatWall("2027-03-07T09:00:00")).toBe("07/03/2027 09:00");
+    expect(formatWall(null)).toBe("");
+  });
+});
+
+describe("professional_id do agendamento", () => {
+  it("criação: só envia se escolhido", () => {
+    expect(professionalIdForPayload({ isEdit: false, selected: "", original: "" })).toBeUndefined();
+    expect(professionalIdForPayload({ isEdit: false, selected: 4, original: "" })).toBe(4);
+  });
+  it("edição: omite se não mudou, envia número se mudou e null se removeu", () => {
+    expect(professionalIdForPayload({ isEdit: true, selected: 4, original: 4 })).toBeUndefined();
+    expect(professionalIdForPayload({ isEdit: true, selected: "", original: null })).toBeUndefined();
+    expect(professionalIdForPayload({ isEdit: true, selected: 5, original: 4 })).toBe(5);
+    expect(professionalIdForPayload({ isEdit: true, selected: "", original: 4 })).toBeNull();
+  });
+  it("pré-seleciona o filtro só se for profissional ativo", () => {
+    const list = [{ id: 1, active: true }, { id: 2, active: false }];
+    expect(presetProfessionalId(1, list)).toBe(1);
+    expect(presetProfessionalId(2, list)).toBeNull();
+    expect(presetProfessionalId(9, list)).toBeNull();
+    expect(presetProfessionalId("all", list)).toBeNull();
+    expect(presetProfessionalId("none", list)).toBeNull();
+  });
+});
+
+describe("buildCompanyPayload", () => {
+  it("envia só os campos que o core aceita no PATCH /companies/:id", () => {
+    const payload = buildCompanyPayload({
+      id: 1, name: "Studio", address: "Rua A, 10", zip_code: "01000-000", city: "SP", state: "SP", business_type: 2,
+      configurations: { notifications: [], opening_hours: [] }, roles: [], services: [], products: [],
+      asaas_status: null, email: "x@example.com", document: "00", plan_code: "free", timezone: "America/Sao_Paulo",
+    });
+    expect(Object.keys(payload).sort()).toEqual([
+      "address", "asaas_status", "business_type", "city", "configurations", "id", "name", "products", "roles",
+      "services", "state", "zip_code",
+    ]);
+  });
+});
 
 describe("unwrap", () => {
   it("aceita {data} (F2), {returnObj} (legado) e resposta do axios", () => {
@@ -44,10 +99,23 @@ describe("expediente semanal", () => {
   });
   it("fim 00:00 vira 24:00 (meia-noite do mesmo dia)", () => {
     expect(normalizeEndTime("18:00", "00:00")).toBe("24:00");
-    expect(normalizeEndTime("00:00", "00:00")).toBe("00:00");
+    expect(normalizeEndTime("00:00", "00:00")).toBe("24:00");
+    expect(normalizeEndTime("", "")).toBe("");
     expect(timeToMinutes("24:00")).toBe(1440);
     expect(buildRulesPayload({ 5: [{ start_time: "18:00", end_time: "00:00" }] }).rules)
       .toEqual([{ weekday: 5, start_time: "18:00", end_time: "24:00" }]);
+  });
+  it("24:00 vindo do core aparece como 00:00 no input de hora e volta como 24:00 ao salvar", () => {
+    const week = rulesToWeek([
+      { weekday: 5, start_time: "18:00", end_time: "24:00" },
+      { weekday: 6, start_time: "00:00", end_time: "24:00" },
+    ]);
+    expect(week[5]).toEqual([{ start_time: "18:00", end_time: "00:00" }]);
+    expect(validateWeek(week)).toEqual([]);
+    expect(buildRulesPayload(week).rules).toEqual([
+      { weekday: 5, start_time: "18:00", end_time: "24:00" },
+      { weekday: 6, start_time: "00:00", end_time: "24:00" },
+    ]);
   });
   it("valida fim depois do início, sobreposição e campos vazios", () => {
     expect(validateWeek({ 1: [{ start_time: "09:00", end_time: "12:00" }, { start_time: "13:00", end_time: "18:00" }] })).toEqual([]);

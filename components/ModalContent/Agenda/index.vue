@@ -115,7 +115,7 @@
 
 </template>
 <script>
-import { buildAppointmentPayload, unwrap } from '../../../utils/payloads.js';
+import { buildAppointmentPayload, professionalIdForPayload, unwrap } from '../../../utils/payloads.js';
 
 export default {
     emits: ["savedContent"],
@@ -228,11 +228,11 @@ export default {
         },
         // Criação: envia só se escolhido. Edição: envia só se mudou (omitir mantém o atual no core).
         professionalForPayload() {
-            const selected = this.professionalId === "" ? null : this.professionalId;
-            if (this.agendamento.id) {
-                return selected === (this.originalProfessionalId === "" ? null : this.originalProfessionalId) ? undefined : selected;
-            }
-            return selected === null ? undefined : selected;
+            return professionalIdForPayload({
+                isEdit: !!this.agendamento.id,
+                selected: this.professionalId,
+                original: this.originalProfessionalId
+            });
         },
         formatUnitLabel(unit, quantity) {
             const qty = quantity || 1;

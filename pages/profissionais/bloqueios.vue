@@ -81,14 +81,8 @@
 </template>
 
 <script>
-import { unwrap, buildTimeBlockPayload, timeBlocksParams } from '../../utils/payloads.js';
+import { unwrap, buildTimeBlockPayload, timeBlocksParams, formatWall } from '../../utils/payloads.js';
 import { validatePeriod } from '../../utils/billing.js';
-
-// "2027-03-07 09:00" -> "07/03/2027 09:00" (sem converter fuso: é hora local da empresa)
-function formatWall(value) {
-    const m = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2})/);
-    return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : String(value || "");
-}
 
 function emptyForm() {
     return { scope: "company", allDay: true, date: "", startsAt: "", endsAt: "", reason: "" };
