@@ -26,7 +26,7 @@
             <div class="input-group">
                 <label for="customer-photo">Foto de perfil</label>
                 <div class="flex items-center mt-2">
-                    <img :src="customer.image != undefined ? customer.image : defaultUserImage" class="avatar avatar-g" alt="">
+                    <img :src="customer.image != undefined ? $myFunctions.fileUrl(customer.image) : defaultUserImage" class="avatar avatar-g" alt="">
                     <input type="file" id="customer-photo" @change="onFileChange" accept="image/*">
                 </div>
             </div>

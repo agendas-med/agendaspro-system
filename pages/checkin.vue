@@ -5,7 +5,7 @@
             :error="loadError" emptyText="Nenhum agendamento para hoje. Crie um na agenda para fazer o check-in." @retry="getAppointments">
             <template #column-cliente="{ item }">
                 <div class="flex items-center">
-                    <img :src="item.image == '' ? defaultUserImage : item.image" class="avatar avatar-pp" alt="">
+                    <img :src="item.image == '' ? defaultUserImage : $myFunctions.fileUrl(item.image)" class="avatar avatar-pp" alt="">
                     <div>
                         <p><strong>{{ item.customer_name }}</strong></p>
                     </div>

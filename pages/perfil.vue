@@ -3,7 +3,7 @@
         <UtilsPageheader title="Meu perfil"
             subtitle="Gerencie suas informações pessoais, preferências e configurações da sua conta." />
         <div class="profile-header flex items-center">
-            <img :src="user.url_photo" class="avatar avatar-g">
+            <img :src="$myFunctions.fileUrl(user.url_photo)" class="avatar avatar-g" alt="">
             <div class="profile-header-informations">
                 <p class="fontsize-lg cinza">{{ user.name }}</p>
                 <p class="fontsize-sm cinza">{{ user.email }}</p>

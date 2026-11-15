@@ -4,7 +4,7 @@
             :error="loadError" emptyText="Nenhum pagamento encontrado." @retry="returnPayments">
             <template #column-cliente="{ item }">
                 <div class="flex items-center">
-                    <img :src="item.customer_image" class="avatar avatar-pp" alt="">
+                    <img :src="$myFunctions.fileUrl(item.customer_image)"class="avatar avatar-pp" alt="">
                     <div>
                         <p><strong>{{ item.customer_name }}</strong></p>
                     </div>

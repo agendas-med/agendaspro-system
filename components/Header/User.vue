@@ -3,7 +3,7 @@
         <button type="button" class="user-container flex items-center" aria-haspopup="menu"
             :aria-expanded="dropdownOpened ? 'true' : 'false'" aria-controls="user-menu" aria-label="Menu do usuário"
             v-on:click="toggleDropdown()" v-on:keydown.esc="closeDropdown()">
-            <img :src="$global.user.url_photo || defaultUserImage" alt="" class="avatar avatar-pp">
+            <img :src="$myFunctions.fileUrl($global.user.url_photo) || defaultUserImage" alt="" class="avatar avatar-pp">
             <span class="informacoes-usuario">
                 <span class="fontsize-md preto">{{ $global.user.name }}</span>
             </span>

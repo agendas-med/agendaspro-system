@@ -6,7 +6,7 @@
     @retry="returnSales" table="venda">
     <template #column-cliente="{ item }">
       <div class="flex items-center">
-        <img :src="item.customer_image == '' ? defaultUserImage : item.customer_image"
+        <img :src="item.customer_image == '' ? defaultUserImage : $myFunctions.fileUrl(item.customer_image)"
           class="avatar avatar-pp" alt="">
         <div>
           <p><strong>{{ item.customer_name }}</strong></p>
