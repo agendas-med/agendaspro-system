@@ -58,17 +58,19 @@
                     </div>
                     <div v-if="insights.byType.length">
                         <h4 class="fontsize-md preto">Por formato</h4>
-                        <table class="by-type fontsize-md">
-                            <thead><tr><th scope="col">Formato</th><th scope="col">Posts</th><th scope="col">Média de interações</th><th scope="col">Engajamento</th></tr></thead>
-                            <tbody>
-                                <tr v-for="t in insights.byType" :key="t.type">
-                                    <th scope="row">{{ typeLabel(t.type) }}</th>
-                                    <td>{{ t.posts }}</td>
-                                    <td>{{ count(t.avg) }}</td>
-                                    <td>{{ rate(t.rate) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="int-table-scroll">
+                            <table class="by-type fontsize-md">
+                                <thead><tr><th scope="col">Formato</th><th scope="col">Posts</th><th scope="col">Média de interações</th><th scope="col">Engajamento</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="t in insights.byType" :key="t.type">
+                                        <th scope="row">{{ typeLabel(t.type) }}</th>
+                                        <td>{{ t.posts }}</td>
+                                        <td>{{ count(t.avg) }}</td>
+                                        <td>{{ rate(t.rate) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </template>
@@ -132,6 +134,10 @@ export default {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: var(--space-6);
+}
+
+.compare > div {
+    min-width: 0;
 }
 
 .ranking {

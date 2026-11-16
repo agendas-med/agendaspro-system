@@ -42,11 +42,11 @@
                 locked-text="Escolher calendários para sincronizar faz parte do plano Premium.">
                 <fieldset class="field">
                     <legend class="fontsize-md-bold preto">O que sincronizar</legend>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-role-push" name="gc-role" value="push" v-model="form.role" />
                         <label for="gc-role-push">Exportar agendamentos para o Google</label>
                     </div>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-role-busy" name="gc-role" value="busy" v-model="form.role" />
                         <label for="gc-role-busy">Importar horários ocupados do Google</label>
                     </div>
@@ -55,11 +55,11 @@
 
                 <fieldset class="field" v-if="form.role === 'push'">
                     <legend class="fontsize-md-bold preto">Destino da exportação</legend>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-src-app" name="gc-src" value="app" v-model="form.source" />
                         <label for="gc-src-app">Criar um calendário do AgendasPRO (recomendado)</label>
                     </div>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-src-existing" name="gc-src" value="existing" v-model="form.source" />
                         <label for="gc-src-existing">Usar um calendário que já existe</label>
                     </div>
@@ -78,11 +78,11 @@
 
                 <fieldset class="field" v-if="form.role === 'busy'">
                     <legend class="fontsize-md-bold preto">Quem terá a agenda bloqueada</legend>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-scope-pro" name="gc-scope" value="professional" v-model="form.scope" />
                         <label for="gc-scope-pro">Um profissional</label>
                     </div>
-                    <div class="input-checkbox-group">
+                    <div class="int-check">
                         <input type="radio" id="gc-scope-company" name="gc-scope" value="company" v-model="form.scope" />
                         <label for="gc-scope-company">Toda a empresa</label>
                     </div>

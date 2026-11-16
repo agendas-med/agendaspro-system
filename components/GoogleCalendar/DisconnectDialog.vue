@@ -8,7 +8,7 @@
                 <div id="gc-dc-message" class="dlg-message">
                     <p class="fontsize-md cinza" v-for="line in lines" :key="line">{{ line }}</p>
                 </div>
-                <div class="input-checkbox-group" v-if="hasAppCalendar">
+                <div class="int-check" v-if="hasAppCalendar">
                     <input type="checkbox" id="gc-dc-remove" v-model="removeAppCalendars" />
                     <label for="gc-dc-remove">Apagar também o calendário criado pelo AgendasPRO no Google (remove os eventos exportados)</label>
                 </div>

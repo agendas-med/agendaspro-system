@@ -8,7 +8,7 @@
         <form class="form" v-on:submit.prevent="submit()" novalidate>
             <fieldset class="placements">
                 <legend class="fontsize-md-bold preto">Onde o link será usado</legend>
-                <div class="input-checkbox-group" v-for="p in placements" :key="p.value">
+                <div class="int-check" v-for="p in placements" :key="p.value">
                     <input type="radio" name="ig-placement" :id="'ig-pl-' + p.value" :value="p.value" v-model="form.placement"
                         :disabled="p.premium && state.premium === false" />
                     <label :for="'ig-pl-' + p.value">

@@ -109,3 +109,25 @@ Segurança: o texto da IA nunca usa `v-html`; passa por um parser próprio (`uti
 Código: lógica pura em `utils/assistant.js` e `utils/safeText.js`, estado/ações em `utils/assistantController.js` (plugin `$assistant`), telas em `pages/assistente*` e `components/Assistant/`. Testes: `npm test` (`tests/assistant*.test.js`, `tests/safeText.test.js`).
 
 Teste visual sem o core: `node dev/mock-core.mjs` (só desenvolvimento, não entra no build; porta 3001, igual ao `NUXT_PUBLIC_API_BASE` padrão do `nuxt dev`). Reflete o follow-up 1 (status, ids, `source`/`degraded`, token, PATCH, erros com código, `created_at` em UTC real). Variáveis: `MOCK_ROLE=admin|member`, `MOCK_PLAN=free|premium` (cota 30 / 1000), `MOCK_DISABLED=1`, `MOCK_KB_LIMIT=N`. Palavras na mensagem disparam cenários: `agendar` (ação proposta), `limite` (402), `devagar` (429), `caiu` (resposta perdida), `link` (links perigosos), `orcamento`, `premium`, `desligar`, `markdown`, `degradar` (fallback) e `semia` (template degradado). Para entrar, grave `agendaspro_jwt`, `agendaspro_refresh_token` e `selected_company` no `localStorage`.
+
+## Integrações (F6): Instagram e Google Agenda
+
+Menu **Integrações** (ESTABELECIMENTO), só aparece se `GET /integrations/instagram/status` ou `GET /integrations/google-calendar/status` responder `200`. `404` ou `503` (`*_not_configured`) escondem a aba correspondente; sem nenhuma aba o item some. Quem não é admin vê o estado e os dados, mas não os botões de conectar, desconectar ou editar vínculos (o core também recusa com `403 admin_required`, que não derruba a sessão). Contrato: `agendaspro-core/docs/contratos-f6.md`.
+
+**Instagram** (`/integracoes/instagram`):
+
+- Estados: desconectado, conectando (redirecionamento), conectado, `reauth_required` (reconectar) e erro. Conectar = `POST /connect/start` com a `redirect_uri` do próprio app (`/oauth/instagram`), depois `POST /callback {code, state}`. O retorno do provedor limpa a query da URL antes de qualquer chamada, usa o `state` uma única vez e mostra o motivo se o usuário recusar (`error=access_denied`) ou o `state` expirar.
+- Desconectar (admin) pede confirmação e explica o que acontece com os dados (LGPD). `POST /disconnect`.
+- Blocos independentes (cada um com carregando, vazio, erro com "tentar de novo" e bloqueio): perfil, grade de posts, engajamento (com a fórmula e a base: alcance ou seguidores), insights com gráficos SVG de histórico (7/30/90 dias; "visitas ao perfil" não é fornecida pelo Instagram), funil de conversão e gerador de links UTM (copiar e QR Code).
+- **Free**: conexão, perfil, 6 posts e link da bio. **Premium** (sinal: `overview.premium`): insights, histórico, conversão, comparação e links por post, story e campanha. Blocos bloqueados mostram o convite de upgrade para `/billing/plano` (somente admin). Cargas passivas usam `suppressUpgradePrompt`; só ações do usuário abrem o modal global de 402.
+
+**Google Agenda** (`/integracoes/google-agenda`):
+
+- Conectar (admin, **Premium**; `402` no Free abre o modal) e desconectar (qualquer plano, com a opção `remove_app_calendars` e aviso do que muda). `reauth_required` pede reconexão. No Free, uma conta já conectada aparece como **pausada** (sem sincronizar).
+- Vínculos por profissional: **enviar** (`push`, o app grava os agendamentos no Google; atraso de até 1 h) e **ocupado** (`busy`, eventos do Google bloqueiam horários). Escolha de calendário (`GET /calendars`), criação e remoção (`/links`).
+- Status da sincronização e **Sincronizar agora** (`POST /sync`, `202`; limite de 6 por hora, `429` mostra quando tentar de novo). O Premium é lido de `GET /billing/subscription` (`entitlement.plan_code`).
+- Bloqueios importados aparecem somente leitura (`GET /time-blocks`, `source: "google"`), também em Profissionais > Bloqueios (etiqueta "Google", sem botão de remover; o core responde `409` se tentarem).
+
+Código: lógica pura em `utils/instagram.js`, `utils/googleCalendar.js` e `utils/integrations.js`; controladores reativos `utils/instagramController.js` (`$instagram`) e `utils/googleCalendarController.js` (`$googleCalendar`), expostos por `plugins/integrations.js`; telas em `pages/integracoes*` e `pages/oauth/*`; componentes em `components/Integrations/`, `components/Instagram/` e `components/GoogleCalendar/`. Texto vindo do core ou do Instagram (legendas, nomes) é sempre interpolado como texto, sem `v-html`; links externos só com `https`. Testes: `npm test` (`tests/instagram*.test.js`, `tests/googleCalendar*.test.js`, `tests/integrations.test.js`).
+
+Teste visual com o mock: além de `MOCK_ROLE` e `MOCK_PLAN`, use `MOCK_IG` e `MOCK_GCAL` = `disconnected` (padrão) | `connected` | `reauth` | `notconfigured` (503) | `off` (404, core sem F6). O "login" do provedor é simulado em `/mock/authorize/<provedor>` (volta para a `redirect_uri` em localhost; acrescente `&deny=1` à URL para simular a recusa). No Free o mock devolve `402` em insights, conversão, links não-bio e na conexão do Google; `sync` responde `429` na sétima chamada.

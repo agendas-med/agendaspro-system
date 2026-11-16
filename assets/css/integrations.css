@@ -72,6 +72,30 @@
     background: #fdecee;
 }
 
+/* Rádio/checkbox com o controle antes do texto (o global .input-checkbox-group espera o rótulo antes do input). */
+.int-check {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-2) 0;
+}
+
+.int-check input {
+  flex: 0 0 23px;
+  margin: 0;
+}
+
+.int-check label {
+  cursor: pointer;
+  margin: 0;
+}
+
+.int-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 .int-sr-only {
     position: absolute;
     width: 1px;

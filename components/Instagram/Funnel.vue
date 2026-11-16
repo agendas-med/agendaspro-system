@@ -35,17 +35,19 @@
             </div>
             <template v-if="conversion.byCampaign.length">
                 <h3 class="fontsize-md-bold preto">Por campanha</h3>
-                <table class="campaigns fontsize-md">
-                    <thead><tr><th scope="col">Campanha</th><th scope="col">Visitas</th><th scope="col">Agendamentos</th><th scope="col">Receita estimada</th></tr></thead>
-                    <tbody>
-                        <tr v-for="c in conversion.byCampaign" :key="c.campaign">
-                            <th scope="row">{{ c.campaign }}</th>
-                            <td>{{ count(c.visits) }}</td>
-                            <td>{{ count(c.bookings) }}</td>
-                            <td>{{ money(c.revenueEstimatedCents) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="int-table-scroll">
+                    <table class="campaigns fontsize-md">
+                        <thead><tr><th scope="col">Campanha</th><th scope="col">Visitas</th><th scope="col">Agendamentos</th><th scope="col">Receita estimada</th></tr></thead>
+                        <tbody>
+                            <tr v-for="c in conversion.byCampaign" :key="c.campaign">
+                                <th scope="row">{{ c.campaign }}</th>
+                                <td>{{ count(c.visits) }}</td>
+                                <td>{{ count(c.bookings) }}</td>
+                                <td>{{ money(c.revenueEstimatedCents) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </template>
         </template>
     </IntegrationsBlock>
