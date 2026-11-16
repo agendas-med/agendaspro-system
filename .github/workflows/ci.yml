@@ -1,0 +1,42 @@
+# CI do painel: testes (vitest) e build de produção (Nuxt). Sem deploy.
+name: CI
+
+on:
+  push:
+    branches: [main, 'launch/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Build de produção
+        env:
+          NODE_ENV: production
+        run: npm run build
+
+      - name: Garante que o mock de desenvolvimento não vai no build
+        run: |
+          if grep -rIl -E 'mock-core|MOCK_ROLE|MOCK_PLAN' .output 2>/dev/null; then
+            echo "Marcador do mock encontrado no build"; exit 1
+          fi
