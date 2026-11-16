@@ -90,3 +90,19 @@ Erros de envio tratados na conversa: `409 window_closed` (abre o seletor de mode
 Segurança: nomes e mensagens de clientes são sempre interpolados como texto (nenhum `v-html`); o link do WhatsApp só é usado se tiver a forma `https://wa.me/<número>`. Dependência nova: `qrcode-generator` (QR em SVG, sem dependências).
 
 Código: lógica pura e testável em `utils/whatsapp.js`, `utils/qr.js` e `utils/clipboard.js`; telas em `pages/whatsapp*`; componentes em `components/Whatsapp/`. Testes: `npm test` (`tests/whatsapp*.test.js`).
+
+## Assistente (F5)
+
+Menu **Assistente** (ESTABELECIMENTO, qualquer membro), só aparece se o core responder ao teste de disponibilidade (`GET /assistant/conversations`; `503 assistant_disabled` ou `404` escondem item e telas). Abas:
+
+- `/assistente/conversa`: histórico de conversas (`GET /assistant/conversations`, `GET .../:id`), envio (`POST .../:id/messages`, JSON, sem SSE) com indicador de carregamento e bloqueio de envio duplicado. Se a resposta se perder (rede, 502, dyno dormindo), a mensagem **nunca é reenviada sozinha**: a tela consulta `message_count` da conversa até reconciliar. Mostra o uso mensal (barra e aviso perto do limite).
+- **Ação proposta**: cartão com resumo, risco, prévia dos parâmetros (campos internos ficam ocultos), contagem regressiva de expiração e botões **Confirmar** / **Rejeitar**. Só o `confirm_token` do core é enviado (`POST /assistant/actions/:id/confirm|reject`); nada é executado sem o clique. O token vive apenas em memória: ao recarregar, a ação pendente aparece sem token e o cartão pede para perguntar de novo ao assistente.
+- `/assistente/conhecimento` (**somente admin**): base de conhecimento (RAG) com listar, adicionar, editar (PUT com o corpo completo) e remover (o core não tem "ativo/inativo"). Mostra aviso de LGPD e o contador N/500. Não administradores nem chamam a rota (o core devolve 401, que derrubaria a sessão).
+
+Erros tratados: `402 plan_upgrade_required` (aviso com botão de upgrade, além do modal global), `429 rate_limited` (contagem regressiva por `retry_after`), `429 assistant_budget_exceeded`, `503 assistant_actions_disabled`, resposta degradada (`source` template/fallback) e erros de rede.
+
+Segurança: o texto da IA nunca usa `v-html`; passa por um parser próprio (`utils/safeText.js`) que só gera texto, negrito, listas e links, e os links só são aceitos para `https://agendaspro.com.br`, caminhos relativos e `mailto:`.
+
+Código: lógica pura em `utils/assistant.js` e `utils/safeText.js`, estado/ações em `utils/assistantController.js` (plugin `$assistant`), telas em `pages/assistente*` e `components/Assistant/`. Testes: `npm test` (`tests/assistant*.test.js`, `tests/safeText.test.js`).
+
+Teste visual sem o core: `node dev/mock-core.mjs` (só desenvolvimento, não entra no build; porta 3001, igual ao `NUXT_PUBLIC_API_BASE` padrão do `nuxt dev`). Variáveis: `MOCK_ROLE=admin|member`, `MOCK_PLAN=free|premium`, `MOCK_DISABLED=1`. Palavras na mensagem disparam cenários: `agendar` (ação proposta), `limite` (402), `devagar` (429), `caiu` (resposta perdida), `link` (links perigosos), `orcamento`, `premium`, `desligar`, `markdown`. Para entrar, grave `agendaspro_jwt`, `agendaspro_refresh_token` e `selected_company` no `localStorage`.
