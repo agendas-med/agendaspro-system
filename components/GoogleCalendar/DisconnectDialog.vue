@@ -1,7 +1,8 @@
 <template>
+  <Transition name="modal">
     <div class="dlg-overlay" v-if="open">
         <div class="dlg-wrapper" v-on:click="cancel()"></div>
-        <div class="dlg" ref="dialog" role="alertdialog" aria-modal="true" aria-labelledby="gc-dc-title"
+        <div class="dlg m-panel" ref="dialog" role="alertdialog" aria-modal="true" aria-labelledby="gc-dc-title"
             aria-describedby="gc-dc-message" tabindex="-1">
             <div class="dlg-body">
                 <h2 class="fontsize-lg-bold preto" id="gc-dc-title">Desconectar o Google Agenda?</h2>
@@ -19,6 +20,7 @@
             </div>
         </div>
     </div>
+  </Transition>
 </template>
 
 <script>

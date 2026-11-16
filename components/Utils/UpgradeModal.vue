@@ -1,7 +1,8 @@
 <template>
+  <Transition name="modal">
     <div class="upgrade-overlay flex items-center justify-center" v-if="$global.upgradePrompt.show">
         <div class="upgrade-wrapper" v-on:click="close()"></div>
-        <div class="upgrade-container" ref="dialog" role="alertdialog" aria-modal="true"
+        <div class="upgrade-container m-panel" ref="dialog" role="alertdialog" aria-modal="true"
             aria-labelledby="upgrade-title" aria-describedby="upgrade-message" tabindex="-1">
             <div class="upgrade-body">
                 <h2 class="fontsize-lg-bold preto" id="upgrade-title">Faça upgrade para continuar</h2>
@@ -17,6 +18,7 @@
             </div>
         </div>
     </div>
+  </Transition>
 </template>
 
 <script>

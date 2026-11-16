@@ -10,7 +10,7 @@
                 <span class="tab-sr-only" v-if="tab.quantity != null && tab.srLabel">, {{ tab.srLabel }}</span>
             </span>
         </button>
-        <div class="tabs-indicator" :style="indicatorStyle"></div>
+        <div class="tabs-indicator" :class="{ 'is-instant': !indicatorReady }" :style="indicatorStyle" aria-hidden="true"></div>
     </div>
 </template>
 <script>
@@ -20,9 +20,10 @@ export default {
     data() {
         return {
             tabActive: null,
+            // Indicador deslizante: 1px de largura esticado por scaleX e levado por translateX (só transform).
+            indicatorReady: false,
             indicatorStyle: {
-                width: '0px',
-                left: '0px'
+                transform: 'translateX(0px) scaleX(0)'
             }
         }
     },
@@ -58,9 +59,10 @@ export default {
                     const tabLeft = activeTab.offsetLeft;
 
                     this.indicatorStyle = {
-                        width: `${tabWidth}px`,
-                        left: `${tabLeft}px`
+                        transform: `translateX(${tabLeft}px) scaleX(${tabWidth})`
                     };
+                    // A primeira posição é direta (sem deslizar desde o canto); as seguintes animam.
+                    if (!this.indicatorReady) requestAnimationFrame(() => { this.indicatorReady = true; });
                 }
             });
         }
@@ -97,7 +99,11 @@ export default {
     cursor: pointer;
     padding-bottom: var(--space-4);
     position: relative;
-    transition: color 0.4s;
+    transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.tab:hover:not(.active) {
+    color: var(--preto);
 }
 
 .active {
@@ -130,8 +136,15 @@ export default {
 .tabs-indicator {
     position: absolute;
     bottom: 0;
+    left: 0;
+    width: 1px;
     height: 3px;
+    transform-origin: left center;
     background-color: var(--verde-escuro); /* Cor do indicador */
-    transition: all 0.4s;
+    transition: transform var(--motion-base) var(--ease-out);
+}
+
+.tabs-indicator.is-instant {
+    transition: none;
 }
 </style>

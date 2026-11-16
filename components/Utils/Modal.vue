@@ -1,10 +1,10 @@
 <template>
   <!-- Teleport: fora da área rolável da página, para cobrir cabeçalho e menu e não rolar junto com a tela. -->
   <Teleport to="body">
-    <div class="modal flex items-center justify-center" v-if="$global.modalUtils.modalTitle != ''"
-        :class="showModal ? 'show' : ''">
+   <Transition name="modal">
+    <div class="modal flex items-center justify-center" v-if="isOpen">
         <div class="modal-wrapper" v-on:click="closeModal()"></div>
-        <div class="modal-container" ref="dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
+        <div class="modal-container m-panel" ref="dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"
             :style="($global.modalUtils.modalTitle.indexOf('Confirmar') != -1 || $global.modalUtils.modalTitle.indexOf('Excluir') != -1) ? 'height: 35vh; min-height: 280px;' : ''">
             <div class="modal-header flex justify-between items-center">
                 <p class="fontsize-lg preto" id="modal-title">{{ $global.modalUtils.modalTitle }}</p>
@@ -44,6 +44,7 @@
             </div>
         </div>
     </div>
+   </Transition>
   </Teleport>
 </template>
 <script>
@@ -53,26 +54,19 @@ export default {
     mixins: [dialogA11y],
     emits: ["excluded", "closeModal", "confirm"],
     props: ["excludepath"],
-    data() {
-        return {
-            showModal: false
+    computed: {
+        // Aberto = tem título e não está fechando; ao fechar, o <Transition name="modal"> faz a saída
+        // enquanto o conteúdo continua montado (o título só é limpo depois, em closeModal).
+        isOpen() {
+            return this.$global.modalUtils.modalTitle != "" && !this.$global.modalUtils.isClosing;
         }
     },
     watch: {
         "$global.modalUtils.modalTitle": function () {
             if (this.$global.modalUtils.modalTitle != "") {
-                setTimeout(() => {
-                    this.showModal = true;
-                }, 100)
                 this.$nextTick(() => this.activateDialog(this.$refs.dialog, () => this.closeModal()));
             } else {
-                this.showModal = false;
                 this.deactivateDialog();
-            }
-        },
-        "$global.modalUtils.isClosing": function (isClosing) {
-            if (isClosing) {
-                this.showModal = false;
             }
         }
     },
@@ -119,8 +113,6 @@ export default {
     top: 0;
     left: 0;
     z-index: 2;
-    transition: opacity 0.4s;
-    overflow: none;
 }
 
 /* Acima do cabeçalho (3) e do menu (2) da tela; abaixo de confirmações, avisos e upgrade. */
@@ -131,25 +123,13 @@ export default {
 .modal-wrapper {
     background-color: rgba(0, 0, 0, 0.6);
     z-index: 3;
-    opacity: 0;
 }
 
-.show {
-    & .modal-container {
-        overflow: hidden;
-        transform: translateY(0) translateX(22%);
-        opacity: 1;
-    }
-
-    & .modal-wrapper {
-        opacity: 1;
-    }
-}
-
+/* O painel fica deslocado (translateX) para centralizar na área ao lado do menu; a entrada/saída
+   (transição "modal", motion.css) parte desse mesmo deslocamento. */
 .modal-container {
-    transition: transform 0.4s, opacity 0.4s;
-    transform: translateY(-20px) translateX(22%);
-    opacity: 0;
+    transform: translateX(22%);
+    overflow: hidden;
     z-index: 4;
     width: 95vw;
     max-width: 700px;
@@ -184,22 +164,26 @@ export default {
     }
 }
 
+.modal-enter-from .modal-container,
+.modal-leave-to .modal-container {
+    transform: translateX(22%) translateY(var(--motion-shift)) scale(var(--motion-scale));
+}
+
+/* Tablet e celular: o painel sobe de baixo (gaveta) e desce ao fechar. */
 @media (max-width: 1029px) {
     .modal-container {
-        transform: translateY(100vh) translateX(0);
+        transform: none;
     }
 
-    .show {
-        & .modal-container {
-            transform: translateY(0) translateX(0);
-        }
+    .modal-enter-from .modal-container,
+    .modal-leave-to .modal-container {
+        opacity: 1;
+        transform: translateY(100vh);
     }
 }
 
 @media (max-width: 480px) {
     .modal-container {
-        opacity: 1 !important;
-        transform: translateY(100vh) translateX(0);
         width: 100vw;
         height: 100%;
         max-height: 100%;

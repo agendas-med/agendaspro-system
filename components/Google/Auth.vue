@@ -49,7 +49,7 @@ export default {
     justify-content: center;
     align-items: center;
     gap: var(--space-6);
-    transition: all 0.4s ease-in-out;
+    transition: background-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 
     & img {
         width: 35px;

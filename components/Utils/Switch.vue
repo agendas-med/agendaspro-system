@@ -60,7 +60,7 @@
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: .4s;
+    transition: background-color var(--motion-base) var(--ease-standard);
     border-radius: 34px;
   }
   
@@ -72,7 +72,7 @@
     left: 2px;
     bottom: 2px;
     background-color: white;
-    transition: .4s;
+    transition: transform var(--motion-base) var(--ease-spring);
     border-radius: 50%;
   }
 

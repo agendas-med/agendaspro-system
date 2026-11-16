@@ -189,7 +189,8 @@ input, button {
     border-radius: var(--radius-md);
     margin: var(--space-4) 0;
     cursor: pointer;
-    transition: all 0.4s;
+    /* Acordeão do dia: único ponto que ainda anima max-height (já existia); a borda anima em cor. */
+    transition: border-color var(--motion-fast) var(--ease-standard), max-height var(--motion-slow) var(--ease-standard);
     max-height: 53px;
     overflow: hidden;
 }
@@ -233,7 +234,7 @@ input, button {
             background-color: var(--cinza-claro);
             border-radius: var(--radius-md);
             cursor: pointer;
-            transition: background-color 0.4s;
+            transition: background-color var(--motion-fast) var(--ease-standard);
         }
 
             & svg:hover {

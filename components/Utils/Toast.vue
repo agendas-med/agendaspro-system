@@ -1,5 +1,5 @@
 <template>
-    <div class="toast-region" aria-live="polite" aria-atomic="false">
+    <TransitionGroup name="toast" tag="div" class="toast-region" aria-live="polite" aria-atomic="false">
         <div v-for="toast in $global.toasts.items" :key="toast.id" class="toast" :class="'toast-' + toast.type"
             :role="toast.type === 'error' ? 'alert' : 'status'">
             <p class="toast-message">{{ toast.message }}</p>
@@ -8,7 +8,7 @@
                 <font-awesome icon="times" aria-hidden="true" />
             </button>
         </div>
-    </div>
+    </TransitionGroup>
 </template>
 
 <style scoped>

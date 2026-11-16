@@ -1,6 +1,6 @@
 <template>
     <div class="exclude-modal-content">
-        <div class="exclude-icon">
+        <div class="exclude-icon m-scale-in">
             <font-awesome icon="trash" class="vermelho fontsize-lg" />
         </div>
         <div class="texts">

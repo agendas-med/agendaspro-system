@@ -1,7 +1,8 @@
 <template>
+  <Transition name="modal">
     <div class="confirm-overlay flex items-center justify-center" v-if="$global.confirmDialog.show">
         <div class="confirm-wrapper" v-on:click="answer(false)"></div>
-        <div class="confirm-container" ref="dialog" role="alertdialog" aria-modal="true"
+        <div class="confirm-container m-panel" ref="dialog" role="alertdialog" aria-modal="true"
             aria-labelledby="confirm-title" aria-describedby="confirm-message" tabindex="-1">
             <div class="confirm-body">
                 <h2 class="fontsize-lg-bold preto" id="confirm-title">{{ $global.confirmDialog.title }}</h2>
@@ -14,6 +15,7 @@
             </div>
         </div>
     </div>
+  </Transition>
 </template>
 
 <script>

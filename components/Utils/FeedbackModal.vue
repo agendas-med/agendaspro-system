@@ -1,8 +1,8 @@
 <template>
-    <div class="modal flex items-center justify-center" v-if="$global.modalUtils.feedback.show"
-        :class="showModal ? 'show' : ''">
+   <Transition name="modal">
+    <div class="modal flex items-center justify-center" v-if="isOpen">
         <div class="modal-wrapper" v-on:click="closeFeedback()"></div>
-        <div class="modal-container" ref="dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-title"
+        <div class="modal-container m-panel" ref="dialog" role="alertdialog" aria-modal="true" aria-labelledby="feedback-title"
             aria-describedby="feedback-message" tabindex="-1">
 
             <div class="modal-header flex justify-between items-center border-b border-gray-200 pb-3">
@@ -13,7 +13,7 @@
             </div>
 
             <div class="modal-body flex flex-col items-center justify-center py-6">
-                <font-awesome v-if="type === 'success'" icon="circle-check" class="feedback-icon text-green-500 mb-4" />
+                <font-awesome v-if="type === 'success'" icon="circle-check" class="feedback-icon m-check-pop text-green-500 mb-4" />
                 <font-awesome v-if="type === 'error'" icon="circle-xmark" class="feedback-icon text-red-500 mb-4" />
                 <font-awesome v-if="type === 'warning'" icon="triangle-exclamation"
                     class="feedback-icon text-yellow-500 mb-4" />
@@ -27,6 +27,7 @@
 
         </div>
     </div>
+   </Transition>
 </template>
 
 <script>
@@ -34,12 +35,12 @@ import { dialogA11y } from '../../utils/dialogA11y.js';
 
 export default {
     mixins: [dialogA11y],
-    data() {
-        return {
-            showModal: false
-        }
-    },
     computed: {
+        // Some assim que começa a fechar: o <Transition name="modal"> faz a saída com o conteúdo ainda montado.
+        isOpen() {
+            const feedback = this.$global.modalUtils.feedback;
+            return feedback.show && !feedback.isClosing;
+        },
         type() {
             return this.$global.modalUtils.feedback.type;
         }
@@ -47,16 +48,9 @@ export default {
     watch: {
         "$global.modalUtils.feedback.show": function (val) {
             if (val) {
-                setTimeout(() => { this.showModal = true; }, 50);
                 this.$nextTick(() => this.activateDialog(this.$refs.dialog, () => this.closeFeedback()));
             } else {
-                this.showModal = false;
                 this.deactivateDialog();
-            }
-        },
-        "$global.modalUtils.feedback.isClosing": function (isClosing) {
-            if (isClosing) {
-                this.showModal = false;
             }
         }
     },
@@ -76,29 +70,15 @@ export default {
     position: absolute;
     top: 0;
     left: 0;
-    transition: opacity 0.4s;
     z-index: 20;
 }
 
 .modal-wrapper {
     background-color: rgba(0, 0, 0, 0.6);
-    opacity: 0;
     z-index: 21;
 }
 
-.show .modal-container {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.show .modal-wrapper {
-    opacity: 1;
-}
-
 .modal-container {
-    transition: transform 0.4s, opacity 0.4s;
-    transform: translateY(-20px);
-    opacity: 0;
     z-index: 22;
     border-radius: var(--radius-lg);
     border: 1px solid var(--cinza-medio);

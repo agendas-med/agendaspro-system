@@ -1,6 +1,6 @@
 <template>
     <div class="confirm-modal-content">
-        <div class="confirm-icon">
+        <div class="confirm-icon m-scale-in">
             <font-awesome icon="triangle-exclamation" class="amarelo fontsize-lg" />
         </div>
         <div class="texts">
