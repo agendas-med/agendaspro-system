@@ -34,8 +34,8 @@ export default {
             });
             if (!ok) return;
             const r = await this.$assistant.deleteConversation(id);
+            // Em caso de falha o controlador já deixa o aviso na tela do chat (sem duplicar com outro toast).
             if (r.ok) this.$myFunctions.showToast(this, "Conversa apagada.", "success");
-            else if (r.error) this.$myFunctions.showToast(this, r.error, "error");
         }
     }
 }

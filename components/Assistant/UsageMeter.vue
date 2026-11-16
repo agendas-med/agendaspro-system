@@ -20,7 +20,7 @@
             <strong>{{ usage.used }}</strong> interações neste mês, sem limite
             <span class="cinza" v-if="planName">(plano {{ planName }})</span>
         </p>
-        <p class="fontsize-sm cinza" v-else>Carregando o uso do mês...</p>
+        <p class="fontsize-sm cinza" v-else>O uso do mês não está disponível agora.</p>
 
         <p class="fontsize-sm cinza" v-if="plan && plan.aiAvailable === false">
             <font-awesome icon="triangle-exclamation" aria-hidden="true" /> A IA está indisponível no momento: as respostas podem vir de um modo simplificado.

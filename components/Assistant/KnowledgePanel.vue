@@ -228,6 +228,8 @@ export default {
                 await this.$base.api.patch("/assistant/knowledge/" + encodeURIComponent(item.id), { active: next });
                 const target = this.items.find((i) => i.id === item.id);
                 if (target) target.active = next;
+                // Mesmo texto aberto no formulário: mantém o checkbox em dia para um Salvar não desfazer a troca.
+                if (this.editing && this.form.id === item.id) this.form.active = next;
                 this.$myFunctions.showToast(this, next ? "Texto ativado." : "Texto desativado.", "success");
             } catch (error) {
                 const c = classifyKnowledgeError(error);
