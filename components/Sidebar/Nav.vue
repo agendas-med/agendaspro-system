@@ -15,6 +15,9 @@
                 <li class="fontsize-md sidebar-text">
                     <router-link to="/whatsapp" @click.native="$emit('closeSidebar')"><font-awesome icon="comments" class="sidebar-icons" />WhatsApp</router-link>
                 </li>
+                <li class="fontsize-md sidebar-text" v-if="$assistant.state.status === 'enabled'">
+                    <router-link to="/assistente" @click.native="$emit('closeSidebar')"><font-awesome icon="wand-magic-sparkles" class="sidebar-icons" />Assistente</router-link>
+                </li>
                 <li class="fontsize-md sidebar-text" v-if="this.$myFunctions.hasPermission(this)">
                     <router-link to="/relatorios" @click.native="$emit('closeSidebar')"><font-awesome icon="chart-simple" class="sidebar-icons" />Relatórios</router-link>
                 </li>
@@ -52,7 +55,11 @@
 </template>
 <script>
 export default {
-    emits: ["closeSidebar"]
+    emits: ["closeSidebar"],
+    mounted() {
+        // O item "Assistente" só aparece se o core responder que o recurso está ligado (falha = continua escondido).
+        this.$assistant.probe();
+    }
 }
 </script>
 <style scoped>

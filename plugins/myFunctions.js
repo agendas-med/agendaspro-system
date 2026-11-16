@@ -294,6 +294,8 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const resetSession = () => {
     sessionPromise = null;
+    // O assistente guarda conversas e tokens de confirmação em memória: nada sobrevive a logout/sessão expirada.
+    if (nuxtApp.$assistant) nuxtApp.$assistant.reset();
   };
 
   const bootSession = async (instance) => {
