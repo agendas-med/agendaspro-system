@@ -12,6 +12,7 @@ const QUOTA_LABELS = {
   max_professionals: "profissionais",
   max_team_users: "usuários da equipe",
   whatsapp_monthly_messages: "mensagens de WhatsApp por mês",
+  assistant_monthly_interactions: "interações do assistente por mês",
 };
 
 const PLAN_NAMES = { free: "Free", premium: "Premium" };
