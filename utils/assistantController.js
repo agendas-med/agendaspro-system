@@ -1,9 +1,12 @@
-// Controlador do assistente interno: estado e fluxos (sonda de disponibilidade, conversas, envio com trava,
-// recuperação por consulta quando a resposta se perde, confirmação/rejeição de ações, cooldown de 429).
+// Controlador do assistente interno: estado e fluxos (status/disponibilidade, conversas, envio com trava,
+// recuperação por consulta quando a resposta se perde, confirmação/rejeição de ações, reemissão do token,
+// exclusão de conversa, cooldown de 429).
 // Puro: `api` (axios), `state` (objeto simples ou reactive do Vue) e timers são injetados.
 //
 // Regras de segurança:
 //  - nada de escrita sem clique: confirm() só roda por chamada explícita da tela e só envia o confirm_token do core;
+//  - reissueToken() também só roda por clique ("Preparar confirmação") e NUNCA confirma: o usuário ainda precisa
+//    clicar em Confirmar. Abrir uma conversa não gera token nem confirma nada;
 //  - o confirm_token vive só em memória (no objeto da ação) e é descartado ao concluir/expirar/trocar de empresa;
 //  - sem chave de idempotência no core: uma mensagem cujo resultado é incerto (timeout/rede/5xx) NUNCA é
 //    reenviada sozinha; reconcilia-se consultando a conversa (message_count).
@@ -12,7 +15,7 @@ import {
   LONG_REQUEST_TIMEOUT_MS, DUPLICATE_SEND_WINDOW_MS,
   validateMessage, classifyAssistantError, normalizeConversation, normalizeConversations,
   normalizeConversationDetail, normalizeCitations, normalizeProposedAction, normalizeConfirmResult,
-  normalizeUsage, usageView, planFromSubscription, isExpired,
+  normalizeUsage, usageView, normalizeStatus, normalizeReissuedAction, isDegraded, isExpired,
 } from "./assistant.js";
 
 export const RECOVERY_INTERVAL_MS = 3000;
@@ -34,8 +37,9 @@ export function initialState() {
     sending: false,
     recovering: false,
     notice: null, // { kind: info|warning|error|upgrade, message, ... }
-    usage: null,
-    plan: null,
+    usage: null, // cota do mês (GET /assistant/status; a resposta da mensagem a atualiza)
+    plan: null, // plano e capacidades (GET /assistant/status), sem a cota
+    deletingId: "",
     cooldownUntil: 0,
   };
 }
@@ -54,7 +58,8 @@ export function createAssistantController({
   const maxAttempts = Math.max(1, Math.ceil((recovery.maxMs ?? RECOVERY_MAX_MS) / intervalMs));
   const sleep = recovery.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
 
-  let epoch = 0; // invalida continuações assíncronas após reset() (logout/troca de empresa)
+  let epoch = 0; // invalida continuações assíncronas após reset() ou ao trocar de conversa
+  let generation = 0; // só muda no reset() (logout/troca de empresa): fluxos que não dependem da conversa aberta
   let seq = 0;
   let probing = null;
   let lastSend = null;
@@ -66,6 +71,7 @@ export function createAssistantController({
 
   function reset() {
     epoch += 1;
+    generation += 1;
     probing = null;
     lastSend = null;
     Object.assign(state, initialState());
@@ -73,7 +79,14 @@ export function createAssistantController({
 
   // ---- Disponibilidade -----------------------------------------------------
 
-  // A rota de lista serve de sonda (não existe /assistant/status): 503 assistant_disabled => esconder tudo.
+  // GET /assistant/status (follow-up 1, A1) é a sonda: `enabled:false` (ou 503 assistant_disabled / 404 de core
+  // antigo) => esconder tudo. Traz também plano, cota e capacidades, então a tela mostra a cota antes do 1º envio.
+  function applyStatus(s) {
+    const { usage, ...plan } = s;
+    state.plan = plan;
+    if (usage) state.usage = usage;
+  }
+
   async function probe(force = false) {
     if (!force && (state.status === "enabled" || state.status === "disabled")) return state.status;
     if (probing) return probing;
@@ -81,9 +94,14 @@ export function createAssistantController({
     if (state.status === "unknown") state.status = "probing";
     probing = (async () => {
       try {
-        const res = await api.get("/assistant/conversations");
+        const res = await api.get("/assistant/status");
         if (my !== epoch) return state.status;
-        state.conversations = normalizeConversations(unwrap(res));
+        const s = normalizeStatus(unwrap(res));
+        applyStatus(s);
+        if (!s.enabled) {
+          state.status = "disabled";
+          return state.status;
+        }
         state.status = "enabled";
         state.statusMessage = "";
       } catch (error) {
@@ -97,23 +115,30 @@ export function createAssistantController({
           state.status = "unavailable";
           state.statusMessage = c.message || "O assistente não respondeu agora.";
         }
+        return state.status;
       } finally {
         probing = null;
       }
+      // Habilitado: carrega a lista (falha aqui não muda o status; a tela mostra a lista vazia e tenta de novo).
+      await refreshConversations();
       return state.status;
     })();
     return probing;
   }
 
-  // Limite do plano (informativo). Silencioso: a cobrança pode estar desligada ou a rota indisponível.
-  async function loadPlan() {
-    const my = epoch;
+  // Atualiza plano e cota (silencioso). Usado depois de um envio negado ou ao reabrir a tela.
+  async function refreshStatus() {
+    const gen = generation;
     try {
-      const res = await api.get("/billing/subscription");
-      if (my !== epoch) return;
-      state.plan = planFromSubscription(unwrap(res));
+      const res = await api.get("/assistant/status");
+      if (gen !== generation) return false;
+      const s = normalizeStatus(unwrap(res));
+      applyStatus(s);
+      if (!s.enabled) state.status = "disabled";
+      return true;
     } catch (error) {
-      if (my === epoch) state.plan = null;
+      if (gen === generation && classifyAssistantError(error).kind === "disabled") state.status = "disabled";
+      return false;
     }
   }
 
@@ -164,11 +189,18 @@ export function createAssistantController({
     const id = detail.conversation.id;
     state.activeId = id;
     state.activeCount = detail.conversation.messageCount;
-    // O core não persiste citações: preserva as já exibidas quando o texto da resposta é o mesmo.
+    // O core não persiste citações nem `degraded`: preserva o que já foi exibido para a mesma mensagem (pelo id do
+    // core; sem id, pelo texto da resposta).
     const previous = state.messages;
     state.messages = detail.messages.map((m) => {
-      const old = previous.find((p) => p.role === "assistant" && p.content === m.content && p.citations && p.citations.length);
-      return old ? { ...m, citations: old.citations, truncated: old.truncated } : m;
+      const old = previous.find((p) => p.role === "assistant" && (m.id != null && p.id != null ? p.id === m.id : p.content === m.content));
+      if (!old) return m;
+      return {
+        ...m,
+        citations: old.citations && old.citations.length ? old.citations : m.citations,
+        truncated: old.truncated,
+        degraded: m.degraded || old.degraded === true,
+      };
     });
     const keys = new Set(state.messages.map((m) => m.key));
     for (const a of state.actions) {
@@ -261,7 +293,7 @@ export function createAssistantController({
     state.sending = true;
     state.draft = "";
     clearNotice();
-    const userMsg = { key: nextKey(), role: "user", content: v.text, source: "user", intent: "", createdAt: "", state: "sending", citations: [], truncated: false };
+    const userMsg = { key: nextKey(), id: null, role: "user", content: v.text, source: "user", degraded: false, intent: "", createdAt: "", state: "sending", citations: [], truncated: false };
     state.messages.push(userMsg);
     // Mantém o objeto reativo (o push em state.messages devolve o proxy ao ler de novo).
     const bubble = state.messages[state.messages.length - 1];
@@ -299,8 +331,17 @@ export function createAssistantController({
 
   function applyReply(data, bubble, convId, base) {
     bubble.state = "ok";
+    // A8: a resposta traz os ids das duas mensagens; a chave passa a ser a mesma que o histórico usará (m<id>).
+    const userId = Number.isFinite(Number(data.user_message_id)) && data.user_message_id != null ? Math.trunc(Number(data.user_message_id)) : null;
+    const replyId = Number.isFinite(Number(data.message_id)) && data.message_id != null ? Math.trunc(Number(data.message_id)) : null;
+    if (userId != null) {
+      bubble.id = userId;
+      bubble.key = `m${userId}`;
+    }
+    const source = typeof data.source === "string" ? data.source : "";
     const reply = {
-      key: nextKey(), role: "assistant", content: String(data.reply == null ? "" : data.reply), source: "", intent: "",
+      key: replyId != null ? `m${replyId}` : nextKey(), id: replyId, role: "assistant", content: String(data.reply == null ? "" : data.reply),
+      source, degraded: isDegraded(source, data.degraded), intent: "",
       createdAt: "", state: "ok", citations: normalizeCitations(data.citations), truncated: data.truncated === true,
     };
     state.messages.push(reply);
@@ -314,7 +355,7 @@ export function createAssistantController({
       if (existing) Object.assign(existing, action);
       else state.actions.push(action);
     }
-    const usage = normalizeUsage(data.usage, state.plan && state.plan.monthlyLimit);
+    const usage = normalizeUsage(data.usage);
     if (usage) state.usage = usage;
     state.activeCount = base + 2;
     if (data.truncated === true) setNotice("info", "Sua mensagem era muito longa e foi encurtada antes de ser enviada.");
@@ -342,16 +383,9 @@ export function createAssistantController({
       return { ok: false, reason: c.kind, error: c.message };
     }
 
-    const acceptedWithoutReply = c.accepted === true || c.kind === "forbidden" || (c.kind === "upgrade" && c.reason === "feature");
-    if (acceptedWithoutReply && convId) {
-      // A mensagem foi gravada (e a cota consumida) mas a proposta falhou: sincroniza e avisa.
-      bubble.state = "ok";
-      await reloadActive();
-      setNotice(c.kind === "upgrade" ? "upgrade" : "warning", c.message, c.kind === "upgrade" ? { reason: c.reason, handledGlobally: c.handledGlobally } : {});
-      return { ok: false, reason: c.kind, error: c.message, accepted: true };
-    }
-
-    // Rejeitada antes de gravar: some com a bolha e devolve o texto ao campo (nada foi consumido).
+    // Follow-up 1 (A7): proposta negada (402 de recurso, 403, 503 actions_disabled, 400 de ferramenta) NÃO grava a
+    // pergunta nem consome cota, como toda rejeição antes de gravar: some com a bolha e devolve o texto ao campo.
+    // O plano/cota são relidos em segundo plano para a tela mostrar o que o servidor sabe agora.
     dropMessage(bubble);
     restoreDraft(text);
     if (c.kind === "rate_limited") {
@@ -360,12 +394,17 @@ export function createAssistantController({
     } else if (c.kind === "upgrade") {
       if (c.limit != null && c.used != null) state.usage = usageView(c.used, c.limit);
       setNotice("upgrade", c.message, { reason: c.reason, quota: c.quota, handledGlobally: c.handledGlobally });
+      if (c.reason === "feature") refreshStatus();
     } else if (c.kind === "budget") {
       setNotice("warning", c.message, { tag: "budget" });
+    } else if (c.kind === "actions_disabled" || c.kind === "forbidden") {
+      setNotice("warning", c.message, { tag: c.kind });
+      refreshStatus();
     } else if (c.kind === "not_found") {
       state.conversations = state.conversations.filter((x) => x.id !== convId);
       state.activeId = "";
       state.messages = [];
+      state.activeCount = 0;
       setNotice("warning", c.message);
     } else {
       setNotice("error", c.message || "Não foi possível enviar a mensagem.");
@@ -396,7 +435,7 @@ export function createAssistantController({
             applyDetail(detail);
             const lost = state.actions.some((a) => a.conversationId === convId && a.state === "pending" && !a.token);
             setNotice(lost ? "warning" : "info", lost
-              ? "A resposta chegou, mas a conexão caiu antes de receber os botões de confirmação. Para executar a ação, peça novamente."
+              ? "A resposta chegou, mas a conexão caiu antes de receber a confirmação da ação. Clique em \"Preparar confirmação\" na ação para gerar uma nova."
               : "A resposta chegou. A conexão tinha falhado, mas nada foi enviado em duplicidade.");
             return { ok: true, recovered: true };
           }
@@ -471,6 +510,42 @@ export function createAssistantController({
     }
   }
 
+  // Ação restaurada do histórico não tem token (o core só o entrega uma vez). "Preparar confirmação" pede um novo
+  // (A4): invalida o anterior, não estende a expiração e NÃO confirma nada; depois o usuário ainda clica em Confirmar.
+  // O estado "reissuing" é marcado de forma síncrona antes de qualquer await: um segundo clique não gera outra chamada.
+  async function reissueToken(actionId) {
+    const a = findAction(actionId);
+    if (!a) return { ok: false, reason: "not_found" };
+    if (a.state !== "pending") return { ok: false, reason: "busy" };
+    if (a.token) return { ok: false, reason: "has_token" };
+    if (isExpired(a.expiresAt, now())) {
+      a.state = "expired";
+      a.token = "";
+      return { ok: false, reason: "expired" };
+    }
+    const gen = generation;
+    a.state = "reissuing";
+    a.error = "";
+    try {
+      const res = await api.post(`/assistant/actions/${encodeURIComponent(actionId)}/token`, undefined, { timeout: longTimeout });
+      if (gen !== generation) return { ok: false, reason: "reset" };
+      const r = normalizeReissuedAction(unwrap(res));
+      if (!r.token) {
+        a.state = "pending";
+        a.error = "Não foi possível preparar a confirmação. Tente de novo.";
+        return { ok: false, reason: "no_token", error: a.error };
+      }
+      a.token = r.token;
+      if (r.expiresAt != null) a.expiresAt = r.expiresAt;
+      if (r.summary) a.summary = r.summary;
+      a.state = "pending";
+      return { ok: true };
+    } catch (error) {
+      if (gen !== generation) return { ok: false, reason: "reset" };
+      return settleActionError(a, error, "reissue");
+    }
+  }
+
   function settleActionError(a, error, phase) {
     const c = classifyAssistantError(error);
     a.error = c.message;
@@ -480,8 +555,10 @@ export function createAssistantController({
       case "processed":
         a.state = "processed"; a.token = ""; break;
       case "failed":
-      case "invalid_token":
         a.state = "failed"; a.token = ""; break;
+      case "invalid_token":
+        // Outro token mais novo existe (outra aba/clique): esta confirmação não vale, mas a ação segue pendente.
+        a.state = "pending"; a.token = ""; break;
       case "not_found":
         a.state = "gone"; a.token = ""; break;
       case "upgrade":
@@ -493,6 +570,12 @@ export function createAssistantController({
       case "actions_disabled":
         a.state = "denied"; a.token = ""; break;
       default:
+        if (phase === "reissue") {
+          // Reemitir token não executa nada: falha de rede deixa a ação pendente para tentar de novo.
+          a.state = "pending";
+          a.error = c.outcomeUnknown ? "Não consegui preparar a confirmação agora. Tente de novo em instantes." : a.error;
+          break;
+        }
         // Timeout/rede/5xx: incerto. O token é de uso único no core, então verificar e tentar de novo é seguro.
         a.state = c.outcomeUnknown ? "unknown" : "pending";
         if (c.outcomeUnknown) {
@@ -518,7 +601,7 @@ export function createAssistantController({
         a.state = "pending";
         a.error = a.token
           ? "A ação ainda está pendente e não foi executada. Você pode confirmar de novo."
-          : "A ação ainda está pendente, mas o botão de confirmar só vale na resposta original. Peça de novo ao assistente.";
+          : "A ação ainda está pendente. Clique em \"Preparar confirmação\" para poder confirmar.";
       } else {
         a.state = isExpired(a.expiresAt, now()) ? "expired" : "processed";
         a.token = "";
@@ -536,8 +619,54 @@ export function createAssistantController({
     }
   }
 
+  // ---- Excluir conversa (A8) ------------------------------------------------
+
+  // Remove a conversa do estado local: lista, ações (pendentes viram inválidas no core) e, se era a aberta, a tela.
+  function dropConversationLocally(id) {
+    state.conversations = state.conversations.filter((c) => c.id !== id);
+    state.actions = state.actions.filter((a) => a.conversationId !== id);
+    if (state.activeId === id) {
+      epoch += 1; // descarta carregamentos em voo dessa conversa
+      state.activeId = "";
+      state.activeCount = 0;
+      state.messages = [];
+      state.loadingMessages = false;
+    }
+  }
+
+  // A tela confirma com o usuário antes de chamar. Não roda durante envio/recuperação (a conversa está em uso).
+  async function deleteConversation(id) {
+    const convId = String(id || "");
+    if (!convId) return { ok: false, reason: "invalid" };
+    if (state.sending || state.recovering) return { ok: false, reason: "busy" };
+    if (state.deletingId) return { ok: false, reason: "busy" };
+    const gen = generation;
+    state.deletingId = convId;
+    try {
+      await api.delete(`/assistant/conversations/${encodeURIComponent(convId)}`);
+      if (gen !== generation) return { ok: false, reason: "reset" };
+      dropConversationLocally(convId);
+      return { ok: true };
+    } catch (error) {
+      if (gen !== generation) return { ok: false, reason: "reset" };
+      const c = classifyAssistantError(error);
+      if (c.kind === "not_found") {
+        // Já não existe (outra aba, outro dispositivo): o objetivo está cumprido.
+        dropConversationLocally(convId);
+        return { ok: true, alreadyGone: true };
+      }
+      if (c.kind === "disabled") state.status = "disabled";
+      setNotice("error", c.outcomeUnknown
+        ? "Não consegui excluir a conversa agora. Verifique sua conexão e tente de novo."
+        : c.message || "Não foi possível excluir a conversa.");
+      return { ok: false, reason: c.kind, error: c.message };
+    } finally {
+      if (gen === generation) state.deletingId = "";
+    }
+  }
+
   return {
-    state, reset, probe, loadPlan, refreshConversations, openConversation, reloadActive, startNew,
-    send, confirm, reject, verifyAction, dismissNotice: clearNotice,
+    state, reset, probe, refreshStatus, refreshConversations, openConversation, reloadActive, startNew,
+    send, confirm, reject, reissueToken, verifyAction, deleteConversation, dismissNotice: clearNotice,
   };
 }

@@ -346,6 +346,7 @@ export function normalizeReissuedAction(raw) {
 
 export const ACTION_STATES = {
   pending: "Aguardando sua decisão",
+  reissuing: "Preparando confirmação...",
   confirming: "Executando...",
   rejecting: "Rejeitando...",
   executed: "Executada",

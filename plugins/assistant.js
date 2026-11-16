@@ -7,7 +7,8 @@ import { createAssistantController, initialState } from '../utils/assistantContr
 export default defineNuxtPlugin((nuxtApp) => {
     const api = {
         get: (...args) => nuxtApp.$base.api.get(...args),
-        post: (...args) => nuxtApp.$base.api.post(...args)
+        post: (...args) => nuxtApp.$base.api.post(...args),
+        delete: (...args) => nuxtApp.$base.api.delete(...args)
     };
     nuxtApp.provide('assistant', createAssistantController({ api, state: reactive(initialState()) }));
 });
