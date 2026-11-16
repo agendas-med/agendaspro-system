@@ -59,14 +59,14 @@
                     <div v-if="insights.byType.length">
                         <h4 class="fontsize-md preto">Por formato</h4>
                         <div class="int-table-scroll">
-                            <table class="by-type fontsize-md">
+                            <table class="int-table by-type fontsize-md">
                                 <thead><tr><th scope="col">Formato</th><th scope="col">Posts</th><th scope="col">Média de interações</th><th scope="col">Engajamento</th></tr></thead>
                                 <tbody>
                                     <tr v-for="t in insights.byType" :key="t.type">
                                         <th scope="row">{{ typeLabel(t.type) }}</th>
-                                        <td>{{ t.posts }}</td>
-                                        <td>{{ count(t.avg) }}</td>
-                                        <td>{{ rate(t.rate) }}</td>
+                                        <td data-th="Posts">{{ t.posts }}</td>
+                                        <td data-th="Média de interações">{{ count(t.avg) }}</td>
+                                        <td data-th="Engajamento">{{ rate(t.rate) }}</td>
                                     </tr>
                                 </tbody>
                             </table>

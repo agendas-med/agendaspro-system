@@ -1,6 +1,6 @@
 <template>
-    <section class="int-card" :aria-labelledby="id">
-        <header class="int-card-header">
+    <section class="ui-card int-card" :aria-labelledby="id">
+        <header class="ui-card-header">
             <h2 class="fontsize-md-bold preto" :id="id">{{ title }}</h2>
             <slot name="actions" />
         </header>

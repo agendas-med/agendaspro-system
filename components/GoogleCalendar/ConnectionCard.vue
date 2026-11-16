@@ -1,6 +1,6 @@
 <template>
-    <section class="int-card" aria-labelledby="gc-conn-title">
-        <header class="int-card-header">
+    <section class="ui-card int-card" aria-labelledby="gc-conn-title">
+        <header class="ui-card-header">
             <h2 class="fontsize-md-bold preto" id="gc-conn-title">
                 <font-awesome :icon="['fab', 'google']" aria-hidden="true" /> Conta do Google
             </h2>
@@ -42,7 +42,7 @@
             <p class="fontsize-md cinza">
                 Conta conectada: <strong class="preto account">{{ state.account ? state.account.email : "" }}</strong>
             </p>
-            <div class="int-notice warning" role="alert" v-if="view === 'reauth_required'">
+            <div class="ui-notice int-notice" role="alert" v-if="view === 'reauth_required'">
                 <p class="fontsize-md preto">
                     O acesso ao Google foi revogado ou expirou. A sincronização está parada até você reconectar a conta.
                 </p>

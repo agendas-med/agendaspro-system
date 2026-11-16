@@ -1,6 +1,6 @@
 <template>
-    <section class="int-card" aria-labelledby="ig-conn-title">
-        <header class="int-card-header">
+    <section class="ui-card int-card" aria-labelledby="ig-conn-title">
+        <header class="ui-card-header">
             <h2 class="fontsize-md-bold preto" id="ig-conn-title">
                 <font-awesome :icon="['fab', 'instagram']" aria-hidden="true" /> Conta do Instagram
             </h2>
@@ -36,7 +36,7 @@
         </template>
 
         <template v-else>
-            <div class="int-notice warning" role="alert" v-if="view === 'reauth_required'">
+            <div class="ui-notice int-notice" role="alert" v-if="view === 'reauth_required'">
                 <p class="fontsize-md preto">
                     O Instagram pediu uma nova autorização (a senha mudou ou a permissão expirou). Os dados abaixo podem estar
                     desatualizados até você reconectar.

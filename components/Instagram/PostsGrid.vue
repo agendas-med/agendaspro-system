@@ -61,7 +61,7 @@ export default {
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: var(--space-5);
 }
 
@@ -103,6 +103,13 @@ export default {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-4);
+}
+
+.post a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
 }
 
 .date {

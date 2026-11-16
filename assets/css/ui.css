@@ -35,7 +35,8 @@
 }
 
 .ui-notice.danger {
-    border-color: var(--vermelho);
+    border-color: var(--vermelho-claro);
+    background: #fdecee;
 }
 
 .ui-notice .btn {

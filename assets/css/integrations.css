@@ -1,26 +1,11 @@
 /* Telas de integrações (Instagram e Google Agenda): cartões, avisos e utilitários compartilhados. */
 .int-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    border: 1px solid var(--cinza-medio);
-    border-radius: var(--radius-lg);
     margin-bottom: var(--space-6);
-    background: #fff;
-}
-
-.int-card-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
 }
 
 .int-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: var(--space-5);
 }
 
@@ -51,25 +36,7 @@
 }
 
 .int-notice {
-    padding: var(--space-4) var(--space-5);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--azul-claro);
-    background: var(--azul-claro);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-4);
     margin-bottom: var(--space-5);
-}
-
-.int-notice.warning {
-    border-color: var(--amarelo);
-    background: var(--amarelo-claro);
-}
-
-.int-notice.error {
-    border-color: var(--vermelho-claro);
-    background: #fdecee;
 }
 
 /* Rádio/checkbox com o controle antes do texto (o global .input-checkbox-group espera o rótulo antes do input). */
@@ -107,4 +74,46 @@
 
 .int-muted {
     color: var(--cinza);
+}
+
+/* Tabela que vira lista de cartões no celular (use data-th em cada td). */
+@media (max-width: 640px) {
+    .int-table thead {
+        display: none;
+    }
+
+    .int-table,
+    .int-table tbody,
+    .int-table tr,
+    .int-table th,
+    .int-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .int-table tr {
+        padding: var(--space-3) 0;
+        border-bottom: 1px solid var(--cinza-medio);
+    }
+
+    .int-table th,
+    .int-table td {
+        border: 0 !important;
+        padding: var(--space-1) 0 !important;
+    }
+
+    .int-table th {
+        font-weight: 700;
+    }
+
+    .int-table td {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-4);
+    }
+
+    .int-table td::before {
+        content: attr(data-th);
+        color: var(--cinza);
+    }
 }

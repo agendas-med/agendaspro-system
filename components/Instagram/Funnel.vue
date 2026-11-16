@@ -36,14 +36,14 @@
             <template v-if="conversion.byCampaign.length">
                 <h3 class="fontsize-md-bold preto">Por campanha</h3>
                 <div class="int-table-scroll">
-                    <table class="campaigns fontsize-md">
+                    <table class="int-table campaigns fontsize-md">
                         <thead><tr><th scope="col">Campanha</th><th scope="col">Visitas</th><th scope="col">Agendamentos</th><th scope="col">Receita estimada</th></tr></thead>
                         <tbody>
                             <tr v-for="c in conversion.byCampaign" :key="c.campaign">
                                 <th scope="row">{{ c.campaign }}</th>
-                                <td>{{ count(c.visits) }}</td>
-                                <td>{{ count(c.bookings) }}</td>
-                                <td>{{ money(c.revenueEstimatedCents) }}</td>
+                                <td data-th="Visitas">{{ count(c.visits) }}</td>
+                                <td data-th="Agendamentos">{{ count(c.bookings) }}</td>
+                                <td data-th="Receita estimada">{{ money(c.revenueEstimatedCents) }}</td>
                             </tr>
                         </tbody>
                     </table>

@@ -1,14 +1,14 @@
 <template>
-    <section class="int-card" aria-live="polite">
+    <section class="ui-card int-card" aria-live="polite">
         <template v-if="status === 'error'">
-            <h2 class="fontsize-lg-bold preto" role="alert">Não foi possível conectar {{ name }}</h2>
+            <h2 class="fontsize-md-bold preto" role="alert">Não foi possível conectar {{ name }}</h2>
             <p class="fontsize-md cinza">{{ message }}</p>
             <div class="int-actions">
                 <button type="button" class="btn btn-primary" v-on:click="back()">Voltar às integrações</button>
             </div>
         </template>
         <template v-else>
-            <h2 class="fontsize-lg-bold preto">Concluindo a conexão com {{ name }}…</h2>
+            <h2 class="fontsize-md-bold preto">Concluindo a conexão com {{ name }}…</h2>
             <p class="fontsize-md cinza" role="status">Isso leva só alguns segundos.</p>
         </template>
     </section>
