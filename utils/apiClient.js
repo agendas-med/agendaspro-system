@@ -58,6 +58,7 @@ export function createApiClient({
   onSessionExpired,
   // 402 plan_upgrade_required -> onPlanUpgradeRequired(info, error); 503 billing_disabled -> onBillingDisabled(error).
   // Quando o erro é tratado globalmente, error.handledGlobally = true (telas evitam mensagem duplicada).
+  // Requisição com { suppressUpgradePrompt: true } na config não abre o modal (a tela trata o 402).
   onPlanUpgradeRequired,
   onBillingDisabled,
 }) {
@@ -149,7 +150,9 @@ export function createApiClient({
       if (isPlanUpgradeError(error)) {
         error.planUpgrade = planUpgradeInfo(error);
         error.friendlyMessage = error.planUpgrade.message;
-        if (onPlanUpgradeRequired) {
+        // Carregamento passivo (ex.: bloco Premium de uma tela): a tela mostra o próprio convite, sem abrir o modal.
+        const passive = !!(original && original.suppressUpgradePrompt);
+        if (onPlanUpgradeRequired && !passive) {
           error.handledGlobally = true;
           try { onPlanUpgradeRequired(error.planUpgrade, error); } catch (e) { /* UI nunca derruba a requisição */ }
         }
