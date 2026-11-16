@@ -1,5 +1,5 @@
 <template>
-    <section class="wa-card" aria-labelledby="wa-templates-title" :aria-busy="loading ? 'true' : 'false'">
+    <section class="ui-card" aria-labelledby="wa-templates-title" :aria-busy="loading ? 'true' : 'false'">
         <h2 class="fontsize-md-bold preto" id="wa-templates-title">Modelos de mensagem</h2>
         <p class="fontsize-sm cinza">
             Modelos são mensagens pré-aprovadas pela Meta. Servem para falar com o cliente fora da janela de 24 horas.
@@ -75,15 +75,6 @@ export default {
 </script>
 
 <style scoped>
-.wa-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    border: 1px solid var(--cinza-medio);
-    border-radius: var(--radius-lg);
-}
-
 .wa-error {
     display: flex;
     flex-direction: column;

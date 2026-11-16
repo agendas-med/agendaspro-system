@@ -1,6 +1,6 @@
 <template>
-    <section class="wa-card" aria-labelledby="wa-status-title">
-        <header class="wa-card-header">
+    <section class="ui-card" aria-labelledby="wa-status-title">
+        <header class="ui-card-header">
             <h2 class="fontsize-md-bold preto" id="wa-status-title">Número do WhatsApp</h2>
             <span class="tag" :class="status.enabled ? 'green' : 'red'" role="status">
                 {{ status.enabled ? "Conectado" : "Desconectado" }}
@@ -38,7 +38,7 @@
                 O link de divulgação ainda não está disponível: a empresa precisa ter um identificador (slug) cadastrado.
             </p>
 
-            <div class="wa-notice" role="status" v-if="!status.bookingReady">
+            <div class="ui-notice" role="status" v-if="!status.bookingReady">
                 A página pública de agendamento da sua empresa está desativada, então o bot não consegue concluir
                 agendamentos pelo WhatsApp. Ative a página pública para liberar essa função.
             </div>
@@ -72,22 +72,6 @@ export default {
 </script>
 
 <style scoped>
-.wa-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    border: 1px solid var(--cinza-medio);
-    border-radius: var(--radius-lg);
-}
-
-.wa-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-}
-
 .wa-link {
     display: flex;
     flex-direction: column;
@@ -108,13 +92,6 @@ export default {
 .wa-copy {
     width: auto;
     max-width: none;
-}
-
-.wa-notice {
-    padding: var(--space-5);
-    border: 1px solid var(--amarelo);
-    background: var(--amarelo-claro);
-    border-radius: var(--radius-md);
 }
 
 .sr-only {

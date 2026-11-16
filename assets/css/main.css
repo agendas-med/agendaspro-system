@@ -203,7 +203,8 @@ body,
   }
 
   &.btn-square {
-    max-width: 40px;
+    max-width: 44px;
+    min-width: 44px;
   }
 
   &.btn-square svg {

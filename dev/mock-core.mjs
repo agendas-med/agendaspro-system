@@ -481,6 +481,7 @@ function handleExtra(req, res, url, body) {
   const group = p.startsWith('/billing') ? 'billing' : p.startsWith('/whatsapp') ? 'whatsapp' : (p.startsWith('/professionals') || p.startsWith('/availability-rules') || p.startsWith('/time-blocks')) ? 'professionals' : '';
   if (group && FAIL.includes(group)) return done(() => coded(res, 500, 'internal_error', 'Erro interno simulado.'));
 
+  if (p === '/appointments' && m === 'GET') return done(() => send(res, 200, { data: [] }));
   if (p === '/billing/plans') {
     return done(() => send(res, 200, { data: [{ code: 'free', name: 'Free', price_cents: 0, commission_bps: 500 }, { code: 'premium', name: 'Premium', price_cents: 4990, commission_bps: 50 }] }));
   }

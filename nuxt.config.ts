@@ -55,7 +55,7 @@ export default defineNuxtConfig({
     port: 8080
   },
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '~/assets/css/integrations.css', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/integrations.css', '~/assets/css/ui.css', '@fortawesome/fontawesome-svg-core/styles.css'],
   fontawesome: {
     icons: {
       solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group',

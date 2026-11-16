@@ -14,7 +14,7 @@
                     <font-awesome icon="angle-left" aria-hidden="true" /> Voltar
                 </button>
                 <div class="thread-title">
-                    <h2 class="fontsize-lg-bold preto">{{ conv.name }}</h2>
+                    <h2 class="fontsize-md-bold preto">{{ conv.name }}</h2>
                     <p class="fontsize-sm cinza" v-if="conv.hasName">{{ conv.phoneLabel }}</p>
                     <p class="fontsize-sm cinza">{{ assignment }}</p>
                 </div>
@@ -81,7 +81,7 @@
                     <form class="composer" v-else novalidate v-on:submit.prevent="sendText()">
                         <label for="wa-composer" class="sr-only">Escreva uma mensagem</label>
                         <textarea id="wa-composer" ref="composer" v-model="draft" rows="2" maxlength="4096"
-                            placeholder="Escreva uma mensagem… (Enter envia, Shift+Enter quebra a linha)"
+                            placeholder="Escreva uma mensagem…" title="Enter envia; Shift+Enter quebra a linha"
                             :disabled="sending" v-on:keydown.enter.exact.prevent="sendText()"></textarea>
                         <button type="submit" class="btn btn-primary composer-send" :class="{ 'btn-loading': sending }"
                             :disabled="sending || !draft.trim()" aria-label="Enviar mensagem">

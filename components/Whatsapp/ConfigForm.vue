@@ -1,5 +1,5 @@
 <template>
-    <section class="wa-card" aria-labelledby="wa-config-title">
+    <section class="ui-card" aria-labelledby="wa-config-title">
         <h2 class="fontsize-md-bold preto" id="wa-config-title">Atendimento automático</h2>
 
         <p class="fontsize-sm cinza" v-if="!isAdmin" role="status">
@@ -112,15 +112,6 @@ export default {
 </script>
 
 <style scoped>
-.wa-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    border: 1px solid var(--cinza-medio);
-    border-radius: var(--radius-lg);
-}
-
 .wa-fieldset {
     display: flex;
     flex-direction: column;

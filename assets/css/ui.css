@@ -1,0 +1,44 @@
+/* Cartão e aviso compartilhados (cobrança, WhatsApp). Usam só os tokens de variaveis.css. */
+.ui-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-6);
+    border: 1px solid var(--cinza-medio);
+    border-radius: var(--radius-lg);
+    background: #fff;
+}
+
+.ui-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.ui-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--amarelo);
+    background: var(--amarelo-claro);
+}
+
+.ui-notice.info {
+    border-color: var(--azul-claro);
+    background: var(--azul-claro);
+}
+
+.ui-notice.danger {
+    border-color: var(--vermelho);
+}
+
+.ui-notice .btn {
+    width: auto;
+    max-width: none;
+}

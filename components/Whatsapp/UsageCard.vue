@@ -1,6 +1,6 @@
 <template>
-    <section class="wa-card" aria-labelledby="wa-usage-title" :aria-busy="loading ? 'true' : 'false'">
-        <header class="wa-card-header">
+    <section class="ui-card" aria-labelledby="wa-usage-title" :aria-busy="loading ? 'true' : 'false'">
+        <header class="ui-card-header">
             <h2 class="fontsize-md-bold preto" id="wa-usage-title">Uso do mês</h2>
             <div class="period">
                 <label for="wa-period" class="fontsize-sm cinza">Período</label>
@@ -34,7 +34,7 @@
                 <p class="fontsize-sm cinza" v-if="!usage.exceeded">Restam {{ usage.remaining }} mensagens neste mês.</p>
             </template>
 
-            <div class="wa-notice danger" role="alert" v-if="isCurrent && usage.exceeded && usage.upgradeInvite">
+            <div class="ui-notice danger" role="alert" v-if="isCurrent && usage.exceeded && usage.upgradeInvite">
                 <p>
                     <strong>Você atingiu o limite de mensagens do plano Free.</strong>
                     O bot e os atendentes não conseguem enviar novas mensagens até o próximo mês. Com o Premium o envio continua.
@@ -42,10 +42,10 @@
                 <NuxtLink to="/billing/plano" class="btn btn-primary" v-if="isAdmin">Ver planos e fazer upgrade</NuxtLink>
                 <p class="fontsize-sm" v-else>Peça ao administrador da empresa para mudar de plano.</p>
             </div>
-            <div class="wa-notice warning" role="status" v-else-if="usage.exceeded">
+            <div class="ui-notice" role="status" v-else-if="usage.exceeded">
                 O limite mensal de mensagens do plano foi atingido.
             </div>
-            <div class="wa-notice warning" role="status" v-else-if="isCurrent && usage.near">
+            <div class="ui-notice" role="status" v-else-if="isCurrent && usage.near">
                 Você já usou {{ usage.percent }}% das mensagens do mês.
                 <template v-if="usage.plan !== 'premium'">O Premium remove o limite.</template>
             </div>
@@ -123,23 +123,6 @@ export default {
 </script>
 
 <style scoped>
-.wa-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-    padding: var(--space-6);
-    border: 1px solid var(--cinza-medio);
-    border-radius: var(--radius-lg);
-}
-
-.wa-card-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-}
-
 .period {
     display: flex;
     align-items: center;
@@ -147,7 +130,7 @@ export default {
 }
 
 .period select {
-    height: 36px;
+    height: 44px;
 }
 
 .bar {
@@ -171,27 +154,6 @@ export default {
     background: var(--vermelho);
 }
 
-.wa-notice {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-5);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--amarelo);
-    background: var(--amarelo-claro);
-}
-
-.wa-notice.danger {
-    border-color: var(--vermelho);
-}
-
-.wa-notice .btn {
-    width: auto;
-    max-width: none;
-}
-
 .wa-error {
     display: flex;
     flex-direction: column;
@@ -205,7 +167,7 @@ export default {
 
 .breakdown {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: var(--space-4);
     margin: 0;
 }

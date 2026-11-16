@@ -437,6 +437,7 @@ export default {
   width: auto;
   max-width: 100%;
   min-width: 220px;
+  min-height: 44px;
 }
 
 .legendas {

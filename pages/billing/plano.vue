@@ -25,19 +25,19 @@
                 </div>
             </div>
 
-            <div class="notice notice-warning" role="alert" v-if="entitlement.source === 'grace'">
+            <div class="ui-notice" role="alert" v-if="entitlement.source === 'grace'">
                 <span>
                     Seu pagamento está vencido. O Premium continua ativo até
                     <strong>{{ $myFunctions.formatDate(entitlement.grace_until) }}</strong>; regularize para não voltar ao plano Free.
                 </span>
             </div>
 
-            <div class="notice notice-info" role="status" v-if="pendingUrl">
+            <div class="ui-notice info" role="status" v-if="pendingUrl">
                 <span>Sua assinatura Premium aguarda o pagamento da fatura. O plano muda assim que o pagamento for confirmado.</span>
                 <a :href="pendingUrl" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Pagar fatura</a>
             </div>
 
-            <div class="notice notice-info" role="status" v-else-if="subscription && subscription.status === 'active' && subscription.next_due_date">
+            <div class="ui-notice info" role="status" v-else-if="subscription && subscription.status === 'active' && subscription.next_due_date">
                 <span>
                     Assinatura {{ subscriptionStatus.toLowerCase() }}. Próximo vencimento em
                     <strong>{{ $myFunctions.formatDate(subscription.next_due_date) }}</strong>
@@ -45,7 +45,7 @@
                 </span>
             </div>
 
-            <div class="notice notice-warning" role="status" v-if="overview.subscriptions_enabled === false">
+            <div class="ui-notice" role="status" v-if="overview.subscriptions_enabled === false">
                 <span>A contratação de planos pagos está temporariamente indisponível.</span>
             </div>
 
@@ -226,29 +226,8 @@ export default {
     margin-bottom: var(--space-6);
 }
 
-.notice {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-5);
-    border-radius: var(--radius-md);
+.ui-notice {
     margin-bottom: var(--space-6);
-}
-
-.notice-info {
-    background: var(--azul-claro);
-}
-
-.notice-warning {
-    background: var(--amarelo-claro);
-    border: 1px solid var(--amarelo);
-}
-
-.notice .btn {
-    width: auto;
-    max-width: none;
 }
 
 .plans-grid {
