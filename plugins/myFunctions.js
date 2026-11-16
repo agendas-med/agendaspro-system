@@ -296,6 +296,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     sessionPromise = null;
     // O assistente guarda conversas e tokens de confirmação em memória: nada sobrevive a logout/sessão expirada.
     if (nuxtApp.$assistant) nuxtApp.$assistant.reset();
+    // Conexões, métricas e vínculos das integrações também não atravessam logout ou troca de empresa.
+    if (nuxtApp.$instagram) nuxtApp.$instagram.reset();
+    if (nuxtApp.$googleCalendar) nuxtApp.$googleCalendar.reset();
   };
 
   const bootSession = async (instance) => {

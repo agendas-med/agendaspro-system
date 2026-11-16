@@ -190,3 +190,22 @@ export function disconnectCopy({ removeAppCalendars = false, links = [] } = {}) 
 export const isGoogleBlock = (block) => !!block && block.source === "google";
 export const GOOGLE_BLOCK_NOTE = "Importado do Google Agenda. Para remover, apague o evento no Google ou desvincule o calendário.";
 export const GOOGLE_BLOCK_REASON = "Ocupado (Google Agenda)";
+
+// Bloqueio importado (GET /time-blocks com source "google"), só para leitura. Datas ficam como o core devolve.
+export function normalizeBlock(raw) {
+  const b = raw && typeof raw === "object" ? raw : {};
+  return {
+    id: b.id === null || b.id === undefined ? "" : String(b.id),
+    professionalId: b.professional_id === null || b.professional_id === undefined || b.professional_id === "" ? null : String(b.professional_id),
+    startsAt: str(b.starts_at, 40),
+    endsAt: str(b.ends_at, 40),
+    reason: str(b.reason, 255),
+    source: b.source === "google" ? "google" : "manual",
+  };
+}
+
+// Só os bloqueios importados do Google, do mais próximo para o mais distante.
+export function googleBlocks(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  return list.filter(isGoogleBlock).map(normalizeBlock).filter((b) => b.id).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
