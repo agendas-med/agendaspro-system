@@ -1,7 +1,7 @@
 <template>
     <section class="int-card" aria-labelledby="ig-conn-title">
         <header class="int-card-header">
-            <h2 class="fontsize-lg-bold preto" id="ig-conn-title">
+            <h2 class="fontsize-md-bold preto" id="ig-conn-title">
                 <font-awesome :icon="['fab', 'instagram']" aria-hidden="true" /> Conta do Instagram
             </h2>
             <span class="tag" :class="tagClass" role="status">{{ label }}</span>

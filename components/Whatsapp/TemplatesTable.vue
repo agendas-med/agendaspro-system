@@ -1,6 +1,6 @@
 <template>
     <section class="wa-card" aria-labelledby="wa-templates-title" :aria-busy="loading ? 'true' : 'false'">
-        <h2 class="fontsize-lg-bold preto" id="wa-templates-title">Modelos de mensagem</h2>
+        <h2 class="fontsize-md-bold preto" id="wa-templates-title">Modelos de mensagem</h2>
         <p class="fontsize-sm cinza">
             Modelos são mensagens pré-aprovadas pela Meta. Servem para falar com o cliente fora da janela de 24 horas.
             A lista é gerenciada pela plataforma e é somente leitura.

@@ -1,7 +1,7 @@
 <template>
     <section class="int-card" aria-labelledby="gc-links-title">
         <header class="int-card-header">
-            <h2 class="fontsize-lg-bold preto" id="gc-links-title">Calendários vinculados</h2>
+            <h2 class="fontsize-md-bold preto" id="gc-links-title">Calendários vinculados</h2>
             <button type="button" class="btn btn-primary btn-auto" v-if="canEdit && !formOpen" v-on:click="openForm()">
                 <font-awesome icon="plus" aria-hidden="true" /> Novo vínculo
             </button>

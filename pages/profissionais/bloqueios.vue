@@ -1,7 +1,7 @@
 <template>
     <section>
         <form class="block-form" @submit.prevent="create()">
-            <h2 class="fontsize-lg-bold preto">Novo bloqueio</h2>
+            <h2 class="fontsize-md-bold preto">Novo bloqueio</h2>
             <p class="fontsize-sm cinza">Use para feriados, folgas e ausências. Nesses horários não é possível agendar.</p>
 
             <div class="form-grid">

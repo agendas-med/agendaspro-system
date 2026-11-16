@@ -1,7 +1,7 @@
 <template>
     <section class="int-card" :aria-labelledby="id">
         <header class="int-card-header">
-            <h2 class="fontsize-lg-bold preto" :id="id">{{ title }}</h2>
+            <h2 class="fontsize-md-bold preto" :id="id">{{ title }}</h2>
             <slot name="actions" />
         </header>
         <p class="fontsize-md cinza" role="status" v-if="block.status === 'loading'">Carregando…</p>

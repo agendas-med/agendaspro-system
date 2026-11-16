@@ -551,6 +551,14 @@ input[type="radio"]:checked::after {
   border-radius: var(--radius-md);
 }
 
+/* Alvo de toque mínimo de 44px em telas pequenas (fechar modal/aviso, remover item). */
+@media (max-width: 768px) {
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 button:focus-visible,
 [role="button"]:focus-visible,
 a:focus-visible,

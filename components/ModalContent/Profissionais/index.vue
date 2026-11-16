@@ -99,7 +99,7 @@ export default {
 
 .color-row input[type="color"] {
     width: 56px;
-    height: 40px;
+    height: 44px;
     padding: 2px;
     cursor: pointer;
 }

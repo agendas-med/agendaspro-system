@@ -1,7 +1,7 @@
 <template>
     <section class="int-card" aria-labelledby="gc-conn-title">
         <header class="int-card-header">
-            <h2 class="fontsize-lg-bold preto" id="gc-conn-title">
+            <h2 class="fontsize-md-bold preto" id="gc-conn-title">
                 <font-awesome :icon="['fab', 'google']" aria-hidden="true" /> Conta do Google
             </h2>
             <span class="tag" :class="tagClass" role="status">{{ label }}</span>

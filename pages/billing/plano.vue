@@ -54,7 +54,7 @@
                 <article class="plan-card" v-for="plan in plans" :key="plan.code"
                     :class="{ current: plan.code === entitlement.plan_code }" :aria-labelledby="'plan-' + plan.code">
                     <header>
-                        <h3 class="fontsize-lg-bold preto" :id="'plan-' + plan.code">{{ plan.name }}</h3>
+                        <h3 class="fontsize-md-bold preto" :id="'plan-' + plan.code">{{ plan.name }}</h3>
                         <span class="tag green" v-if="plan.code === entitlement.plan_code">Plano atual</span>
                     </header>
                     <p class="plan-price preto">
@@ -89,7 +89,7 @@
             <p class="fontsize-sm cinza" v-if="!isAdmin">Apenas administradores podem mudar de plano.</p>
 
             <!-- Comparativo -->
-            <h3 class="fontsize-lg-bold preto section-title">Comparativo de recursos</h3>
+            <h3 class="fontsize-md-bold preto section-title">Comparativo de recursos</h3>
             <div class="matrix-wrapper">
                 <table class="matrix">
                     <caption class="sr-only">Comparativo entre os planos Free e Premium</caption>

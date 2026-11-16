@@ -159,8 +159,9 @@ export default {
         top: 60px;
     }
 
+    /* Sem transform: um ancestral transformado prende os modais (position: fixed) à área rolável da página. */
     .slot {
-        transform: translateX(-300px);
+        left: 0;
     }
 
     .header,

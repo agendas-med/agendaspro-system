@@ -147,7 +147,8 @@ export default {
 .link-btn {
     background: none;
     border: 0;
-    padding: var(--space-2) 0;
+    padding: var(--space-3) 0;
+    min-height: 44px;
     color: var(--azul);
     cursor: pointer;
     font: inherit;

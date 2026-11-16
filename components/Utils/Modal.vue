@@ -1,4 +1,6 @@
 <template>
+  <!-- Teleport: fora da área rolável da página, para cobrir cabeçalho e menu e não rolar junto com a tela. -->
+  <Teleport to="body">
     <div class="modal flex items-center justify-center" v-if="$global.modalUtils.modalTitle != ''"
         :class="showModal ? 'show' : ''">
         <div class="modal-wrapper" v-on:click="closeModal()"></div>
@@ -42,6 +44,7 @@
             </div>
         </div>
     </div>
+  </Teleport>
 </template>
 <script>
 import { dialogA11y } from '../../utils/dialogA11y.js';
@@ -118,6 +121,11 @@ export default {
     z-index: 2;
     transition: opacity 0.4s;
     overflow: none;
+}
+
+/* Acima do cabeçalho (3) e do menu (2) da tela; abaixo de confirmações, avisos e upgrade. */
+.modal {
+    z-index: 10;
 }
 
 .modal-wrapper {

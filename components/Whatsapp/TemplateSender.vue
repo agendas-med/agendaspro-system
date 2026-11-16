@@ -1,6 +1,6 @@
 <template>
     <div class="tpl-sender" role="group" aria-labelledby="tpl-title">
-        <h3 class="fontsize-lg-bold preto" id="tpl-title">Enviar um modelo aprovado</h3>
+        <h3 class="fontsize-md-bold preto" id="tpl-title">Enviar um modelo aprovado</h3>
 
         <UtilsLoading :loading="loading" />
 

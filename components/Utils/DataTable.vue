@@ -345,7 +345,36 @@ export default {
     text-align: center;
   }
 
-  /* Alvos de toque de 44px: links dentro do cartão e paginação. */
+  /* Textos longos (e-mails, nomes) quebram dentro do cartão em vez de estourar a tela. */
+  td,
+  td > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Barra de busca e botão "Cadastrar" em linhas próprias, sem sair da tela. */
+  .datatable-header {
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .datatable-header .btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .datatable-header :deep(.input-search-with-icon) {
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+  }
+
+  /* Alvos de toque de 44px: ações do cartão, links e paginação. */
+  td :deep(.rounded-button) {
+    width: 44px;
+    height: 44px;
+  }
+
   td a {
     display: inline-block;
     padding: var(--space-3) 0;

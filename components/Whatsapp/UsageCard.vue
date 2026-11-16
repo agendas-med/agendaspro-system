@@ -1,7 +1,7 @@
 <template>
     <section class="wa-card" aria-labelledby="wa-usage-title" :aria-busy="loading ? 'true' : 'false'">
         <header class="wa-card-header">
-            <h2 class="fontsize-lg-bold preto" id="wa-usage-title">Uso do mês</h2>
+            <h2 class="fontsize-md-bold preto" id="wa-usage-title">Uso do mês</h2>
             <div class="period">
                 <label for="wa-period" class="fontsize-sm cinza">Período</label>
                 <select id="wa-period" v-model="period" v-on:change="load()" :disabled="loading">

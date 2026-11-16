@@ -1,6 +1,6 @@
 <template>
     <section class="wa-card" aria-labelledby="wa-config-title">
-        <h2 class="fontsize-lg-bold preto" id="wa-config-title">Atendimento automático</h2>
+        <h2 class="fontsize-md-bold preto" id="wa-config-title">Atendimento automático</h2>
 
         <p class="fontsize-sm cinza" v-if="!isAdmin" role="status">
             Apenas administradores podem alterar estas configurações. Peça ao administrador da empresa.

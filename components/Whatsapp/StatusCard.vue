@@ -1,7 +1,7 @@
 <template>
     <section class="wa-card" aria-labelledby="wa-status-title">
         <header class="wa-card-header">
-            <h2 class="fontsize-lg-bold preto" id="wa-status-title">Número do WhatsApp</h2>
+            <h2 class="fontsize-md-bold preto" id="wa-status-title">Número do WhatsApp</h2>
             <span class="tag" :class="status.enabled ? 'green' : 'red'" role="status">
                 {{ status.enabled ? "Conectado" : "Desconectado" }}
             </span>
