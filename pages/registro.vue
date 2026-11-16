@@ -180,7 +180,7 @@ definePageMeta({ layout: 'login', access: 'public', title: 'Criar conta' })
 .strength-bar span {
   flex: 1;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--cinza-medio);
 }
 

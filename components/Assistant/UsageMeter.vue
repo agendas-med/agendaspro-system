@@ -62,7 +62,7 @@ export default {
 
 .usage-bar {
     height: 8px;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xs);
     background: var(--cinza-medio);
     overflow: hidden;
 }

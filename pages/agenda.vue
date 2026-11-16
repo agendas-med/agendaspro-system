@@ -502,7 +502,7 @@ export default {
   align-items: center;
   background: var(--cinza-medio);
   padding: var(--space-3) 3px;
-  border-radius: 30px;
+  border-radius: var(--radius-lg);
   position: relative;
   width: 270px;
 }
@@ -524,7 +524,7 @@ export default {
   background: var(--branco);
   width: calc((100% - 6px) / 3);
   height: 90%;
-  border-radius: 30px;
+  border-radius: var(--radius-md);
   transition: transform 0.4s;
   z-index: 1;
 }

@@ -93,7 +93,7 @@ export default {
 
 .bar {
     height: 10px;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xs);
     background: var(--cinza-claro);
     overflow: hidden;
     margin: var(--space-2) 0;

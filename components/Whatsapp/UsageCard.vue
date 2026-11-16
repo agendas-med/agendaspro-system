@@ -136,7 +136,7 @@ export default {
 .bar {
     height: 12px;
     background: var(--cinza-medio);
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     overflow: hidden;
 }
 
