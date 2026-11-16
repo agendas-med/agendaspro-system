@@ -55,10 +55,11 @@
 
         <div class="chat-footer">
             <div class="chat-notice" :class="notice.kind" role="alert" v-if="notice">
-                <p>
-                    {{ notice.message }}
-                    <strong v-if="cooldownSeconds > 0"> Tente de novo em {{ cooldownSeconds }} s.</strong>
+                <p v-if="notice.tag === 'rate_limited'">
+                    <template v-if="cooldownSeconds > 0">Muitas mensagens em pouco tempo. Você poderá enviar de novo em <strong>{{ cooldownSeconds }} s</strong>.</template>
+                    <template v-else>Você já pode enviar de novo.</template>
                 </p>
+                <p v-else>{{ notice.message }}</p>
                 <div class="chat-notice-actions">
                     <template v-if="notice.kind === 'upgrade'">
                         <NuxtLink to="/billing/plano" class="btn btn-primary" v-if="isAdmin">Ver planos e fazer upgrade</NuxtLink>
