@@ -68,10 +68,14 @@
                 <p>{{ item.ends }}</p>
             </template>
             <template #column-motivo="{ item }">
-                <p>{{ item.reason || "—" }}</p>
+                <p>
+                    <span class="tag google-tag" v-if="item.fromGoogle">Google</span>
+                    {{ item.reason || "—" }}
+                </p>
             </template>
             <template #column-ações="{ item }">
-                <button type="button" class="rounded-button" :aria-label="'Remover bloqueio de ' + item.who + ' em ' + item.starts"
+                <span class="fontsize-sm cinza" v-if="item.fromGoogle" :title="'Importado do Google Agenda. Para remover, apague o evento no Google ou desfaça o vínculo em Integrações.'">Somente leitura</span>
+                <button v-else type="button" class="rounded-button" :aria-label="'Remover bloqueio de ' + item.who + ' em ' + item.starts"
                     :title="'Remover bloqueio'" v-on:click="remove(item)">
                     <font-awesome icon="trash" class="vermelho" aria-hidden="true" />
                 </button>
@@ -116,7 +120,8 @@ export default {
                 who: b.professional_id == null ? "Empresa" : (names[b.professional_id] || "Profissional #" + b.professional_id),
                 starts: formatWall(b.starts_at),
                 ends: formatWall(b.ends_at),
-                reason: b.reason || ""
+                reason: b.reason || "",
+                fromGoogle: b.source === "google"
             }));
         }
     },
@@ -162,6 +167,7 @@ export default {
             });
         },
         async remove(item) {
+            if (item.fromGoogle) return; // importado do Google: o core recusa (409); a UI nem oferece
             const ok = await this.$myFunctions.confirmDialog({
                 title: "Remover bloqueio",
                 message: "O horário de " + item.starts + " a " + item.ends + " (" + item.who + ") volta a ficar disponível para agendamento.",
@@ -174,7 +180,9 @@ export default {
                 this.$myFunctions.showToast(this, "Bloqueio removido.", "success");
                 this.load();
             } catch (error) {
+                // 409: o bloqueio passou a vir do Google desde o último carregamento; recarrega para refletir.
                 this.$myFunctions.notifyError(this, error, "Não foi possível remover o bloqueio.");
+                if (error?.response?.status === 409) this.load();
             }
         }
     }
@@ -204,6 +212,12 @@ export default {
     width: auto;
     max-width: none;
     align-self: flex-start;
+}
+
+.google-tag {
+    display: inline-block;
+    margin-right: var(--space-3);
+    padding: var(--space-1) var(--space-3);
 }
 
 .period-filter {
