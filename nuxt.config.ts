@@ -55,14 +55,14 @@ export default defineNuxtConfig({
     port: 8080
   },
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/integrations.css', '@fortawesome/fontawesome-svg-core/styles.css'],
   fontawesome: {
     icons: {
       solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group',
         'chart-simple', 'wallet', 'bars', 'angle-down','search', 'filter', 'arrow-down-wide-short', 'trash', 'circle-plus', 'user-lock', 'angle-left', 'angle-right', 'angle-down',
-        'backward-step', 'location-dot', 'forward-step', 'plus', 'user-pen', 'gear', 'pen', 'circle-info', 'trash-can', 'circle-check', 'circle-play', 'circle-stop', 'circle-xmark', 'triangle-exclamation', 'bag-shopping', 'dolly', 'rotate-left', 'copy', 'circle-notch', 'clock', 'ban', 'user-tie', 'credit-card', 'comments', 'paper-plane', 'wand-magic-sparkles', 'book-open', 'lock', 'shield-halved'],
+        'backward-step', 'location-dot', 'forward-step', 'plus', 'user-pen', 'gear', 'pen', 'circle-info', 'trash-can', 'circle-check', 'circle-play', 'circle-stop', 'circle-xmark', 'triangle-exclamation', 'bag-shopping', 'dolly', 'rotate-left', 'copy', 'circle-notch', 'clock', 'ban', 'user-tie', 'credit-card', 'comments', 'paper-plane', 'wand-magic-sparkles', 'book-open', 'lock', 'shield-halved', 'plug', 'rotate', 'heart', 'arrow-up-right-from-square'],
       regular: ['comment', 'face-smile'],
-      brands: ['twitter'],
+      brands: ['twitter', 'instagram', 'google'],
     },
   },
   postcss: {

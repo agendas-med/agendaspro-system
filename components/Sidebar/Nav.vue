@@ -18,6 +18,9 @@
                 <li class="fontsize-md sidebar-text" v-if="$assistant.state.status === 'enabled'">
                     <router-link to="/assistente" @click.native="$emit('closeSidebar')"><font-awesome icon="wand-magic-sparkles" class="sidebar-icons" />Assistente</router-link>
                 </li>
+                <li class="fontsize-md sidebar-text" v-if="integrationsAvailable">
+                    <router-link to="/integracoes" @click.native="$emit('closeSidebar')"><font-awesome icon="plug" class="sidebar-icons" />Integrações</router-link>
+                </li>
                 <li class="fontsize-md sidebar-text" v-if="this.$myFunctions.hasPermission(this)">
                     <router-link to="/relatorios" @click.native="$emit('closeSidebar')"><font-awesome icon="chart-simple" class="sidebar-icons" />Relatórios</router-link>
                 </li>
@@ -56,9 +59,17 @@
 <script>
 export default {
     emits: ["closeSidebar"],
+    computed: {
+        // "Integrações" só aparece se o core oferecer ao menos uma delas (core sem a F6 = recurso escondido).
+        integrationsAvailable() {
+            return this.$instagram.state.available === "yes" || this.$googleCalendar.state.available === "yes";
+        }
+    },
     mounted() {
         // O item "Assistente" só aparece se o core responder que o recurso está ligado (falha = continua escondido).
         this.$assistant.probe();
+        this.$instagram.loadStatus();
+        this.$googleCalendar.loadStatus();
     }
 }
 </script>
