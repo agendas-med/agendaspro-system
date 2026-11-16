@@ -26,6 +26,10 @@ export default {
         background: none;
         border: 0;
         padding: 0;
+        /* Alvo de toque mínimo de 44px sem mexer na altura do cabeçalho. */
+        min-width: 44px;
+        min-height: 44px;
+        margin-left: calc(-1 * var(--space-3));
     }
 
     .responsive-menu-button {

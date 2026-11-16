@@ -103,6 +103,13 @@ export default {
     background: var(--cinza-claro); 
 }
 
+/* Alvo de toque de 44px em telas pequenas. */
+@media (max-width: 768px) {
+    .tab {
+        min-height: 44px;
+    }
+}
+
 .tabs-indicator {
     position: absolute;
     bottom: 0;

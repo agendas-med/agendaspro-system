@@ -26,8 +26,10 @@
             </div>
 
             <div class="notice notice-warning" role="alert" v-if="entitlement.source === 'grace'">
-                Seu pagamento está vencido. O Premium continua ativo até
-                <strong>{{ $myFunctions.formatDate(entitlement.grace_until) }}</strong>; regularize para não voltar ao plano Free.
+                <span>
+                    Seu pagamento está vencido. O Premium continua ativo até
+                    <strong>{{ $myFunctions.formatDate(entitlement.grace_until) }}</strong>; regularize para não voltar ao plano Free.
+                </span>
             </div>
 
             <div class="notice notice-info" role="status" v-if="pendingUrl">
@@ -36,13 +38,15 @@
             </div>
 
             <div class="notice notice-info" role="status" v-else-if="subscription && subscription.status === 'active' && subscription.next_due_date">
-                Assinatura {{ subscriptionStatus.toLowerCase() }}. Próximo vencimento em
-                <strong>{{ $myFunctions.formatDate(subscription.next_due_date) }}</strong>
-                ({{ $myFunctions.formatCents(subscription.price_cents) }}).
+                <span>
+                    Assinatura {{ subscriptionStatus.toLowerCase() }}. Próximo vencimento em
+                    <strong>{{ $myFunctions.formatDate(subscription.next_due_date) }}</strong>
+                    ({{ $myFunctions.formatCents(subscription.price_cents) }}).
+                </span>
             </div>
 
             <div class="notice notice-warning" role="status" v-if="overview.subscriptions_enabled === false">
-                A contratação de planos pagos está temporariamente indisponível.
+                <span>A contratação de planos pagos está temporariamente indisponível.</span>
             </div>
 
             <!-- Planos -->

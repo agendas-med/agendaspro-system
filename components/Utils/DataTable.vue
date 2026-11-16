@@ -344,5 +344,16 @@ export default {
     color: var(--preto);
     text-align: center;
   }
+
+  /* Alvos de toque de 44px: links dentro do cartão e paginação. */
+  td a {
+    display: inline-block;
+    padding: var(--space-3) 0;
+  }
+
+  .pagination button {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 </style>

@@ -108,8 +108,11 @@ export default {
     height: 100vh;
     width: 300px;
     border-right: 1px solid var(--cinza-medio);
-    transition: transform 0.4s;
+    transition: transform 0.4s, visibility 0s;
     z-index: 2;
+    /* Menu mais alto que a tela (telas baixas, celular): rola dentro do menu em vez de vazar por cima da página. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .sidebar-menu-wrapper {
@@ -146,6 +149,9 @@ export default {
 @media (max-width: 1029px) {
     .sidebar:not(.sidebar-opened) {
         transform: translateX(-300px);
+        /* Fechado = fora do foco do teclado e dos leitores de tela (some depois da animação). */
+        visibility: hidden;
+        transition: transform 0.4s, visibility 0s 0.4s;
     }
 
     .sidebar {

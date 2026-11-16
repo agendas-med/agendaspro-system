@@ -18,9 +18,9 @@ export const PLAN_MATRIX = [
   { key: "deposit", label: "Cobrança de sinal por Pix no agendamento", free: "Sim", premium: "Sim" },
   { key: "public_page", label: "Página pública com link e QR Code", free: "Sim, com a marca AgendasPro", premium: "Sim, sem marca e com cor/tema", soon: true },
   { key: "waitlist", label: "Lista de espera, reativação de inativos e avaliação no Google", free: "Não", premium: "Sim", soon: true },
-  { key: "instagram", label: "Integração com Instagram", free: "Somente o link do perfil", premium: "Métricas, posts e conversão", soon: true },
-  { key: "google_calendar", label: "Sincronização com Google Agenda", free: "Não", premium: "Sim", soon: true },
-  { key: "assistant", label: "Assistente de IA no painel", free: "30 interações/mês (consulta)", premium: "1.000/mês, com ações confirmadas", soon: true },
+  { key: "instagram", label: "Integração com Instagram", free: "Somente o link do perfil", premium: "Métricas, posts e conversão" },
+  { key: "google_calendar", label: "Sincronização com Google Agenda", free: "Não", premium: "Sim" },
+  { key: "assistant", label: "Assistente de IA no painel", free: "30 interações/mês (consulta)", premium: "1.000/mês, com ações confirmadas" },
   { key: "reports", label: "Relatórios", free: "Básicos, 6 meses de histórico", premium: "Avançados, exportação CSV e histórico ilimitado", soon: true },
 ];
 
