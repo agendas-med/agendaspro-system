@@ -1,68 +1,39 @@
 <template>
-    <nav>
-        <div class="nav-group">
-            <p class="fontsize-sm">ESTABELECIMENTO</p>
-            <ul>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/agenda" @click.native="$emit('closeSidebar')"><font-awesome icon="calendar-day" class="sidebar-icons" />Agenda</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/vendas" @click.native="$emit('closeSidebar')"><font-awesome icon="bag-shopping" class="sidebar-icons" />Vendas</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/clientes" @click.native="$emit('closeSidebar')"><font-awesome icon="user-group" class="sidebar-icons" />Clientes</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/whatsapp" @click.native="$emit('closeSidebar')"><font-awesome icon="comments" class="sidebar-icons" />WhatsApp</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text" v-if="$assistant.state.status === 'enabled'">
-                    <router-link to="/assistente" @click.native="$emit('closeSidebar')"><font-awesome icon="wand-magic-sparkles" class="sidebar-icons" />Assistente</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text" v-if="integrationsAvailable">
-                    <router-link to="/integracoes" @click.native="$emit('closeSidebar')"><font-awesome icon="plug" class="sidebar-icons" />Integrações</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text" v-if="this.$myFunctions.hasPermission(this)">
-                    <router-link to="/relatorios" @click.native="$emit('closeSidebar')"><font-awesome icon="chart-simple" class="sidebar-icons" />Relatórios</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/estoque" @click.native="$emit('closeSidebar')"><font-awesome icon="dolly" class="sidebar-icons" />Estoque</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/checkin" @click.native="$emit('closeSidebar')"><font-awesome icon="circle-check" class="sidebar-icons" />Check-in</router-link>
-                </li>
-            </ul>
-        </div>
-        <div class="nav-group" v-if="this.$myFunctions.hasPermission(this)">
-            <p class="fontsize-sm">FINANCEIRO</p>
-            <ul>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/financeiro/pagamentos" @click.native="$emit('closeSidebar')"><font-awesome icon="wallet" class="sidebar-icons" />Financeiro</router-link>
-                </li>
-            </ul>
-        </div>
-        <div class="nav-group" v-if="this.$myFunctions.hasPermission(this)">
-            <p class="fontsize-sm">CONFIGURAÇÕES</p>
-            <ul>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/profissionais" @click.native="$emit('closeSidebar')"><font-awesome icon="user-tie" class="sidebar-icons" />Profissionais</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/billing/plano" @click.native="$emit('closeSidebar')"><font-awesome icon="credit-card" class="sidebar-icons" />Plano e cobrança</router-link>
-                </li>
-                <li class="fontsize-md sidebar-text">
-                    <router-link to="/configuracoes" @click.native="$emit('closeSidebar')"><font-awesome icon="gear" class="sidebar-icons" />Configurações</router-link>
+    <nav aria-label="Menu principal">
+        <div class="nav-group" v-for="section in sections" :key="section.id">
+            <p class="fontsize-sm" :id="'nav-' + section.id">{{ section.label }}</p>
+            <ul :aria-labelledby="'nav-' + section.id">
+                <li class="fontsize-md sidebar-text" v-for="entry in section.items" :key="entry.id">
+                    <router-link :to="entry.to" :class="{ 'is-active': isActive(entry) }"
+                        :aria-current="isActive(entry) ? 'page' : null" @click.native="$emit('closeSidebar')">
+                        <font-awesome :icon="entry.icon" class="sidebar-icons" />{{ entry.label }}
+                    </router-link>
                 </li>
             </ul>
         </div>
     </nav>
 </template>
 <script>
+import { buildNavSections, isNavActive } from '../../utils/nav.js';
+
 export default {
     emits: ["closeSidebar"],
     computed: {
         // "Integrações" só aparece se o core oferecer ao menos uma delas (core sem a F6 = recurso escondido).
         integrationsAvailable() {
             return this.$instagram.state.available === "yes" || this.$googleCalendar.state.available === "yes";
+        },
+        sections() {
+            return buildNavSections({
+                isAdmin: !!this.$myFunctions.hasPermission(this),
+                assistantEnabled: this.$assistant.state.status === "enabled",
+                integrationsAvailable: this.integrationsAvailable
+            });
+        }
+    },
+    methods: {
+        isActive(entry) {
+            return isNavActive(entry, this.$route.path);
         }
     },
     mounted() {
@@ -97,6 +68,7 @@ export default {
             height: 100%;
             display: flex;
             align-items: center;
+            border-radius: var(--radius-md);
         }
 
         ul li:hover {
@@ -105,5 +77,23 @@ export default {
 
         ul li:hover, ul li:hover .sidebar-icons {
             color: var(--branco);
+        }
+
+        /* Rota atual: mesmo destaque do hover (sem estilo novo), mais o texto em negrito para não depender só da cor. */
+        ul li a.is-active {
+            background: var(--verde-escuro);
+            color: var(--branco);
+            font-weight: 700;
+        }
+
+        ul li a.is-active .sidebar-icons {
+            color: var(--branco);
+        }
+
+        /* Alvo de toque de 44px no menu em gaveta (celular/tablet). */
+        @media (max-width: 1029px) {
+            ul li a {
+                min-height: 44px;
+            }
         }
 </style>
