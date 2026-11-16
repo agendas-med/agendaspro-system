@@ -6,7 +6,8 @@
             :tabindex="tabActive == index ? 0 : -1" v-on:click="selectTab(index)" ref="tabs">
             <span class="tab-inner flex items-center">
                 <span>{{ tab.name }}</span>
-                <span class="tab-number fontsize-sm" v-if="tab.quantity != null">{{ tab.quantity }}</span>
+                <span class="tab-number fontsize-sm" v-if="tab.quantity != null" :aria-hidden="tab.srLabel ? 'true' : null">{{ tab.quantity }}</span>
+                <span class="tab-sr-only" v-if="tab.quantity != null && tab.srLabel">, {{ tab.srLabel }}</span>
             </span>
         </button>
         <div class="tabs-indicator" :style="indicatorStyle"></div>
@@ -23,6 +24,13 @@ export default {
                 width: '0px',
                 left: '0px'
             }
+        }
+    },
+    watch: {
+        // A largura da aba muda quando aparece/some o número (ex.: selo de conversas aguardando).
+        tabs: {
+            deep: true,
+            handler() { this.updateIndicator(); }
         }
     },
     methods: {
@@ -94,6 +102,15 @@ export default {
 
 .active {
     color: var(--verde-escuro);
+}
+
+.tab-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }
 
 .tab-number {

@@ -299,6 +299,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     // Conexões, métricas e vínculos das integrações também não atravessam logout ou troca de empresa.
     if (nuxtApp.$instagram) nuxtApp.$instagram.reset();
     if (nuxtApp.$googleCalendar) nuxtApp.$googleCalendar.reset();
+    // O selo de conversas do WhatsApp é da empresa anterior: zera e para o polling.
+    if (nuxtApp.$whatsappBadge) nuxtApp.$whatsappBadge.reset();
   };
 
   const bootSession = async (instance) => {

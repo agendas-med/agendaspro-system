@@ -12,6 +12,8 @@
 //   MOCK_EMPTY=1     listas vazias (profissionais, conversas do WhatsApp, modelos) para revisar estados vazios
 //   MOCK_FAIL=billing,professionals,whatsapp  grupos de rotas respondendo 500 ("Erro interno simulado.")
 //   MOCK_WA=off|disabled|exceeded  estado do WhatsApp (desconectado, desativado, cota excedida)
+//   MOCK_WA_WAITING=120  forca o numero de conversas aguardando atendimento no resumo (testa o limite visual "99+")
+//   GET /whatsapp/conversations/summary (contagens do selo, follow-up 1) e POST /whatsapp/conversations/:id/read; cada conversa traz unread_count.
 //   Também atende GET /appointments (agenda por profissional).
 //
 // Palavras-chave para disparar cenários no chat:
@@ -441,6 +443,7 @@ const timeBlocks = () => [
 const EMPTY = process.env.MOCK_EMPTY === '1';
 const FAIL = (process.env.MOCK_FAIL || '').split(',').filter(Boolean);
 const WA_MODE = process.env.MOCK_WA || 'on';
+const WA_WAITING = process.env.MOCK_WA_WAITING === undefined || process.env.MOCK_WA_WAITING === '' ? null : Number(process.env.MOCK_WA_WAITING);
 const ago = (min) => new Date(Date.now() - min * 60000).toISOString().slice(0, 19);
 let pros = EMPTY ? [] : [
   { id: 1, name: 'Joana Martins', email: 'joana@studio.test', phone: '11988887777', color: '#4a90e2', active: true, service_ids: [1, 2], google_connected: true },
@@ -451,10 +454,11 @@ let rules = [1, 2, 3, 4, 5].map((d) => ({ weekday: d, start_time: '09:00:00', en
 let extraBlocks = [];
 let nextPro = 10;
 const waConvs = EMPTY ? [] : [
-  { id: 1, contact: { wa_id: '5511988887777', name: 'Maria Souza', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: null, handoff_at: ago(12), last_inbound_at: ago(3), last_message_at: ago(3), window_open: true, last_message: { body: 'Oi, preciso falar com alguem sobre meu horario de amanha', direction: 'in', author: 'customer' } },
+  { id: 1, contact: { wa_id: '5511988887777', name: 'Maria Souza', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: null, handoff_at: ago(12), last_inbound_at: ago(3), last_message_at: ago(3), window_open: true, unread_count: 2, last_message: { body: 'Oi, preciso falar com alguem sobre meu horario de amanha', direction: 'in', author: 'customer' } },
+  { id: 5, contact: { wa_id: '5511944443333', name: 'Pedro Lima', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: null, handoff_at: ago(40), last_inbound_at: ago(35), last_message_at: ago(35), window_open: true, unread_count: 1, last_message: { body: 'Posso remarcar para sexta?', direction: 'in', author: 'customer' } },
   { id: 2, contact: { wa_id: '5511977776666', name: '', opted_out: false }, mode: 'bot', state: 'idle', assigned_user_id: null, last_inbound_at: ago(90), last_message_at: ago(85), window_open: true, last_message: { body: 'Seu horario esta confirmado para amanha as 14h.', direction: 'out', author: 'bot' } },
   { id: 3, contact: { wa_id: '5511966665555', name: 'Roberto Carlos Fernandes de Almeida Junior', opted_out: true }, mode: 'bot', state: 'idle', last_inbound_at: ago(60 * 80), last_message_at: ago(60 * 80), window_open: false, last_message: { body: 'PARAR', direction: 'in', author: 'customer' } },
-  { id: 4, contact: { wa_id: '5511955554444', name: 'Ana Paula', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: 1, last_inbound_at: ago(60 * 30), last_message_at: ago(60 * 29), window_open: false, last_message: { body: 'Obrigada!', direction: 'in', author: 'customer' } },
+  { id: 4, contact: { wa_id: '5511955554444', name: 'Ana Paula', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: 1, last_inbound_at: ago(60 * 30), last_message_at: ago(60 * 29), window_open: false, unread_count: 0, last_message: { body: 'Obrigada!', direction: 'in', author: 'customer' } },
 ];
 const waMsgs = {
   1: [
@@ -465,6 +469,17 @@ const waMsgs = {
   ],
 };
 let waMsgSeq = 50;
+// Contagens do selo (mesmo contrato de GET /whatsapp/conversations/summary), calculadas na hora: mudam ao assumir/liberar/ler.
+function waSummary() {
+  const n = (fn) => waConvs.filter(fn).length;
+  const waiting = n((c) => c.mode === 'human' && !c.assigned_user_id);
+  return {
+    total: waConvs.length, bot: n((c) => c.mode === 'bot'), human: n((c) => c.mode === 'human'),
+    waiting: WA_WAITING === null ? waiting : WA_WAITING, assumed: n((c) => c.mode === 'human' && c.assigned_user_id),
+    mine: n((c) => c.assigned_user_id === 1), opted_out: n((c) => c.contact.opted_out),
+    unread_conversations: n((c) => (c.unread_count || 0) > 0), unread_messages: waConvs.reduce((t, c) => t + (c.unread_count || 0), 0),
+  };
+}
 const waTemplates = [
   { name: 'lembrete_24h', language: 'pt_BR', category: 'UTILITY', purpose: 'reminder', body_preview: 'Ola {{1}}, lembrando do seu horario de {{2}} amanha as {{3}}.', param_count: 3, status: 'approved', synced_at: ago(100) },
   { name: 'agendamento_confirmado', language: 'pt_BR', category: 'UTILITY', purpose: 'booking_confirmed', body_preview: 'Ola {{1}}, seu agendamento foi confirmado.', param_count: 1, status: 'approved', synced_at: ago(100) },
@@ -552,13 +567,15 @@ function handleExtra(req, res, url, body) {
       return done(() => send(res, 200, { data: { period: url.searchParams.get('period') || new Date().toISOString().slice(0, 7), plan: PLAN, messages: { used: exceeded ? 50 : PLAN === 'free' ? 41 : 312, limit: PLAN === 'free' ? 50 : null }, breakdown: { inbound: 140, bot_replies: 98, billable: 41, delivered: 38, read: 30, failed: 2 }, ai: { tokens: 18200, calls: 64, daily_limit: 50000 } } }));
     }
     if (p === '/whatsapp/templates') return done(() => send(res, 200, { data: EMPTY ? [] : waTemplates }));
+    if (p === '/whatsapp/conversations/summary' && m === 'GET') return done(() => send(res, 200, { data: waSummary() }));
     if (p === '/whatsapp/conversations' && m === 'GET') return done(() => send(res, 200, { data: waConvs }));
-    const wc = p.match(/^\/whatsapp\/conversations\/(\d+)(?:\/(messages|assume|release))?$/);
+    const wc = p.match(/^\/whatsapp\/conversations\/(\d+)(?:\/(messages|assume|release|read))?$/);
     if (wc) {
       const conv = waConvs.find((c) => c.id === Number(wc[1]));
       if (!conv) return done(() => coded(res, 404, 'conversation_not_found', 'Conversa nao encontrada.'));
       if (!wc[2]) return done(() => send(res, 200, { data: conv }));
       if (wc[2] === 'assume') { conv.mode = 'human'; conv.assigned_user_id = 1; return done(() => send(res, 200, { data: conv })); }
+      if (wc[2] === 'read') { conv.unread_count = 0; return done(() => send(res, 200, { data: conv })); }
       if (wc[2] === 'release') { conv.mode = 'bot'; conv.assigned_user_id = null; return done(() => send(res, 200, { data: conv })); }
       if (m === 'POST') {
         if (!conv.window_open && !body.template) return done(() => coded(res, 409, 'window_closed', 'A janela de 24 horas esta fechada. Envie um modelo.'));

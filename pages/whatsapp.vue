@@ -7,16 +7,23 @@
 </template>
 
 <script>
+import { badgeLabel, badgeText, waitingCount } from '../utils/whatsappBadge.js';
+
 export default {
     data() {
         const path = this.$route.path;
         const routes = ["conversas", "configuracao"];
         const active = routes.find((r) => path === "/whatsapp/" + r || path.startsWith("/whatsapp/" + r + "/")) || "conversas";
-        return {
-            tabs: [
-                { name: "Conversas", quantity: null, route: "conversas", default: active === "conversas" },
-                { name: "Configuração e uso", quantity: null, route: "configuracao", default: active === "configuracao" }
-            ]
+        return { active };
+    },
+    computed: {
+        // Selo (mesma contagem do menu): conversas aguardando atendimento; some quando é zero.
+        tabs() {
+            const waiting = waitingCount(this.$whatsappBadge.state.summary);
+            return [
+                { name: "Conversas", quantity: badgeText(waiting) || null, srLabel: badgeLabel(waiting), route: "conversas", default: this.active === "conversas" },
+                { name: "Configuração e uso", quantity: null, route: "configuracao", default: this.active === "configuracao" }
+            ];
         }
     }
 }

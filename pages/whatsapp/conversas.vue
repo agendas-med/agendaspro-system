@@ -104,7 +104,8 @@ export default {
         },
         // Rodada do polling (15 s, só com a aba visível): lista + conversa aberta, em silêncio.
         async poll() {
-            const tasks = [this.refreshList()];
+            // O selo do menu/aba acompanha a tela aberta (uma chamada leve, junta com a do menu se coincidir).
+            const tasks = [this.refreshList(), this.$whatsappBadge.refresh()];
             if (this.$refs.thread && typeof this.$refs.thread.refresh === "function") tasks.push(this.$refs.thread.refresh());
             await Promise.all(tasks);
         },
@@ -139,6 +140,7 @@ export default {
         },
         // A conversa aberta mudou (assumir, envio, atualização): reflete na lista sem esperar o polling.
         onThreadUpdated(conv) {
+            this.$whatsappBadge.refresh();
             const index = this.loaded.findIndex((c) => c.id === conv.id);
             if (index === -1) return;
             const next = [...this.loaded];

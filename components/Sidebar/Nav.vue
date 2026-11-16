@@ -7,6 +7,10 @@
                     <router-link :to="entry.to" :class="{ 'is-active': isActive(entry) }"
                         :aria-current="isActive(entry) ? 'page' : null" @click.native="$emit('closeSidebar')">
                         <font-awesome :icon="entry.icon" class="sidebar-icons" />{{ entry.label }}
+                        <template v-if="entry.badge === 'whatsapp' && waitingText">
+                            <span class="nav-badge fontsize-sm" aria-hidden="true">{{ waitingText }}</span>
+                            <span class="sr-only">, {{ waitingLabel }}</span>
+                        </template>
                     </router-link>
                 </li>
             </ul>
@@ -14,7 +18,8 @@
     </nav>
 </template>
 <script>
-import { buildNavSections, isNavActive } from '../../utils/nav.js';
+import { buildNavSections, hasNavBadge, isNavActive } from '../../utils/nav.js';
+import { badgeLabel, badgeText, waitingCount } from '../../utils/whatsappBadge.js';
 
 export default {
     emits: ["closeSidebar"],
@@ -22,6 +27,18 @@ export default {
         // "Integrações" só aparece se o core oferecer ao menos uma delas (core sem a F6 = recurso escondido).
         integrationsAvailable() {
             return this.$instagram.state.available === "yes" || this.$googleCalendar.state.available === "yes";
+        },
+        showWhatsappBadge() {
+            return hasNavBadge(this.sections, "whatsapp");
+        },
+        waiting() {
+            return waitingCount(this.$whatsappBadge.state.summary);
+        },
+        waitingText() {
+            return badgeText(this.waiting);
+        },
+        waitingLabel() {
+            return badgeLabel(this.waiting);
         },
         sections() {
             return buildNavSections({
@@ -31,12 +48,29 @@ export default {
             });
         }
     },
+    watch: {
+        // Selo do WhatsApp: o polling só roda enquanto o item existe no menu (e o core diz que o WhatsApp está ligado).
+        showWhatsappBadge: {
+            immediate: true,
+            handler(show) {
+                if (show) this.$whatsappBadge.start();
+                else this.$whatsappBadge.stop();
+            }
+        }
+    },
     methods: {
         isActive(entry) {
             return isNavActive(entry, this.$route.path);
         }
     },
+    beforeUnmount() {
+        if (this.onVisibility) document.removeEventListener("visibilitychange", this.onVisibility);
+        this.$whatsappBadge.stop();
+    },
     mounted() {
+        // Aba oculta pausa o polling do selo; voltar a ficar visível atualiza já.
+        this.onVisibility = () => this.$whatsappBadge.notifyVisibility();
+        document.addEventListener("visibilitychange", this.onVisibility);
         // O item "Assistente" só aparece se o core responder que o recurso está ligado (falha = continua escondido).
         this.$assistant.probe();
         this.$instagram.loadStatus();
@@ -88,6 +122,28 @@ export default {
 
         ul li a.is-active .sidebar-icons {
             color: var(--branco);
+        }
+
+        /* Selo "aguardando atendimento": mesmo amarelo da etiqueta "Aguardando atendente" (legível sobre o hover e o ativo). */
+        .nav-badge {
+            margin-left: auto;
+            min-width: 24px;
+            padding: 0 var(--space-3);
+            border-radius: var(--radius-lg);
+            background: var(--amarelo);
+            color: var(--preto);
+            font-weight: 700;
+            text-align: center;
+            line-height: 24px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
         }
 
         /* Alvo de toque de 44px no menu em gaveta (celular/tablet). */
