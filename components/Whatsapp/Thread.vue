@@ -42,7 +42,7 @@
                 <p class="thread-empty fontsize-md cinza" v-if="!messages.length">Nenhuma mensagem nesta conversa.</p>
 
                 <ul class="msg-list">
-                    <li v-for="m in messages" :key="m.id" class="msg" :class="[m.direction, 'author-' + m.author]">
+                    <li v-for="m in messages" :key="m.id" class="msg m-fade-up" :class="[m.direction, 'author-' + m.author]">
                         <p class="msg-author fontsize-sm cinza">{{ authorLabel(m) }}</p>
                         <p class="msg-body">{{ text(m) }}</p>
                         <p class="msg-meta fontsize-sm cinza">

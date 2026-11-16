@@ -2,7 +2,7 @@
     <section>
         <UtilsPageheader title="WhatsApp" subtitle="Atenda seus clientes, acompanhe o bot e veja o uso de mensagens do mês." />
         <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'whatsapp', tabs)" />
-        <NuxtPage />
+        <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
     </section>
 </template>
 

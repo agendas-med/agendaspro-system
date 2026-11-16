@@ -2,7 +2,7 @@
     <section>
         <UtilsPageheader title="Configurações" subtitle="Personalize e configure o sistema de acordo com suas necessidades." />
         <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'configuracoes', tabs)" />
-        <NuxtPage/>
+        <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
     </section>
 </template>
 

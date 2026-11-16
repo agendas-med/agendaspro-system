@@ -1,4 +1,5 @@
 <template>
+<div>
     <section>
         <div class="profile-configurations">
             <form @submit.prevent="changeCompanyConfigurations">
@@ -94,6 +95,7 @@
 
         </div>
     </UtilsModal>
+</div>
 </template>
 
 <script>

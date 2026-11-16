@@ -29,7 +29,7 @@
                 <div class="bar" role="progressbar" aria-label="Mensagens usadas no mês" aria-valuemin="0"
                     :aria-valuemax="usage.limit" :aria-valuenow="Math.min(usage.used, usage.limit)"
                     :aria-valuetext="usage.used + ' de ' + usage.limit + ' mensagens'">
-                    <div class="bar-fill" :class="usage.tone" :style="{ width: usage.percent + '%' }"></div>
+                    <div class="bar-fill m-bar-fill" :class="usage.tone" :style="{ width: usage.percent + '%' }"></div>
                 </div>
                 <p class="fontsize-sm cinza" v-if="!usage.exceeded">Restam {{ usage.remaining }} mensagens neste mês.</p>
             </template>
@@ -142,7 +142,6 @@ export default {
 
 .bar-fill {
     height: 100%;
-    transition: width 0.4s;
     background: var(--verde-escuro);
 }
 

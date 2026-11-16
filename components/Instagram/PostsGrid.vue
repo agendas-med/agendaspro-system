@@ -2,7 +2,7 @@
     <IntegrationsBlock id="ig-posts" title="Últimas publicações" :block="state.blocks.posts" :empty="state.blocks.posts.status === 'ready' && !visible.length"
         empty-text="Nenhuma publicação encontrada nesta conta ainda." v-on:retry="$instagram.loadDashboard()">
         <ul class="posts">
-            <li class="post" v-for="post in visible" :key="post.id">
+            <li class="post m-fade-up m-stagger" v-for="(post, postIndex) in visible" :key="post.id" :style="{ '--i': Math.min(postIndex, 7) }">
                 <div class="thumb">
                     <img :src="post.thumbnail" alt="" loading="lazy" referrerpolicy="no-referrer" v-if="post.thumbnail" />
                     <span class="no-thumb fontsize-sm cinza" v-else>Sem imagem</span>
@@ -87,6 +87,11 @@ export default {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform var(--motion-slow) var(--ease-out);
+}
+
+.post:hover .thumb img {
+    transform: scale(1.04);
 }
 
 .type {

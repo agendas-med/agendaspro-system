@@ -2,7 +2,7 @@
     <section>
         <UtilsPageheader title="Profissionais" subtitle="Cadastre quem atende, os horários de cada um e os bloqueios da agenda." />
         <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'profissionais', tabs)" />
-        <NuxtPage />
+        <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
     </section>
 </template>
 

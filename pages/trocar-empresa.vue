@@ -73,13 +73,13 @@
   text-align: left;
 
   & svg {
-    transition: transform 0.4s ease-in-out;
+    transition: transform var(--motion-base) var(--ease-out);
     transform: translateX(-7px);
   }
 
   &:hover, &:focus-visible {
     & span {
-      transition: color 0.4s ease-in-out;
+      transition: color var(--motion-fast) var(--ease-standard);
       color: var(--black);
     }
 

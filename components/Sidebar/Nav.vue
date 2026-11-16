@@ -8,7 +8,7 @@
                         :aria-current="isActive(entry) ? 'page' : null" @click.native="$emit('closeSidebar')">
                         <font-awesome :icon="entry.icon" class="sidebar-icons" />{{ entry.label }}
                         <template v-if="entry.badge === 'whatsapp' && waitingText">
-                            <span class="nav-badge fontsize-sm" aria-hidden="true">{{ waitingText }}</span>
+                            <span class="nav-badge m-pulse-soft fontsize-sm" aria-hidden="true">{{ waitingText }}</span>
                             <span class="sr-only">, {{ waitingLabel }}</span>
                         </template>
                     </router-link>
@@ -92,8 +92,8 @@ export default {
         border-radius: var(--radius-md);
         cursor: pointer;
         margin: var(--space-2) 0;
-        transition: background 0.4s;
-    }   
+        transition: background-color var(--motion-fast) var(--ease-standard);
+    }
 
         ul li a {
             padding: var(--space-3);
@@ -103,6 +103,10 @@ export default {
             display: flex;
             align-items: center;
             border-radius: var(--radius-md);
+            position: relative;
+            transition:
+                background-color var(--motion-fast) var(--ease-standard),
+                color var(--motion-fast) var(--ease-standard);
         }
 
         ul li:hover {
@@ -122,6 +126,32 @@ export default {
 
         ul li a.is-active .sidebar-icons {
             color: var(--branco);
+        }
+
+        /* Indicador do item ativo: barra que cresce (scaleY) na borda esquerda quando a rota passa a ser a atual. */
+        ul li a.is-active::before {
+            content: "";
+            position: absolute;
+            left: var(--space-1);
+            top: 25%;
+            height: 50%;
+            width: 3px;
+            border-radius: var(--radius-xs);
+            background: var(--branco);
+            transform-origin: center;
+            animation: m-nav-indicator var(--motion-base) var(--ease-out) both;
+        }
+
+        @keyframes m-nav-indicator {
+            from {
+                opacity: 0;
+                transform: scaleY(0);
+            }
+
+            to {
+                opacity: 1;
+                transform: scaleY(1);
+            }
         }
 
         /* Selo "aguardando atendimento": mesmo amarelo da etiqueta "Aguardando atendente" (legível sobre o hover e o ativo). */

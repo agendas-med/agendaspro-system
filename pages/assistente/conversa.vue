@@ -89,7 +89,7 @@ export default {
     }
 
     .side-chevron {
-        transition: transform 0.2s;
+        transition: transform var(--motion-base) var(--ease-out);
     }
 
     .assistant-side.is-open .side-chevron {

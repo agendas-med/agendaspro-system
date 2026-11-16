@@ -13,7 +13,7 @@
                         <span class="preto">{{ step.label }}</span>
                         <strong class="preto">{{ count(step.value) }}</strong>
                     </div>
-                    <div class="bar" aria-hidden="true"><span :style="{ width: step.pct + '%' }"></span></div>
+                    <div class="bar" aria-hidden="true"><span class="m-bar-fill" :style="{ width: step.pct + '%' }"></span></div>
                     <p class="fontsize-sm cinza" v-if="step.rate !== null">{{ rate(step.rate) }} da etapa anterior</p>
                 </li>
             </ol>

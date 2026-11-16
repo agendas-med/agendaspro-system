@@ -18,7 +18,7 @@
 
             <ul class="msg-list" v-if="state.messages.length">
                 <template v-for="m in state.messages" :key="m.key">
-                    <li class="msg" :class="[m.role === 'user' ? 'out' : 'in', 'state-' + m.state]">
+                    <li class="msg m-fade-up" :class="[m.role === 'user' ? 'out' : 'in', 'state-' + m.state]">
                         <p class="msg-meta fontsize-sm cinza">
                             <strong>{{ m.role === 'user' ? 'Você' : 'Assistente' }}</strong>
                             <span v-if="when(m)"> · {{ when(m) }}</span>
@@ -37,20 +37,20 @@
                             <font-awesome icon="book-open" aria-hidden="true" /> Fontes consultadas: {{ citationSummary(m.citations) }}
                         </p>
                     </li>
-                    <li class="msg-action" v-for="a in actionsFor(m.key)" :key="a.actionId">
+                    <li class="msg-action m-fade-up" v-for="a in actionsFor(m.key)" :key="a.actionId">
                         <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" @reissue="onReissue" />
                     </li>
                 </template>
 
-                <li class="msg-action" v-for="a in looseActions" :key="a.actionId">
+                <li class="msg-action m-fade-up" v-for="a in looseActions" :key="a.actionId">
                     <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" @reissue="onReissue" />
                 </li>
             </ul>
 
-            <p class="chat-typing fontsize-sm cinza" v-if="state.sending" role="status">
+            <p class="chat-typing m-fade-in fontsize-sm cinza" v-if="state.sending" role="status">
                 <font-awesome icon="circle-notch" spin aria-hidden="true" /> O assistente está respondendo... pode levar alguns segundos.
             </p>
-            <p class="chat-typing fontsize-sm cinza" v-else-if="state.recovering" role="status">
+            <p class="chat-typing m-fade-in fontsize-sm cinza" v-else-if="state.recovering" role="status">
                 <font-awesome icon="circle-notch" spin aria-hidden="true" /> Conferindo se a resposta chegou...
             </p>
         </div>
@@ -256,7 +256,8 @@ export default {
 }
 
 .msg.state-sending {
-    opacity: 0.7;
+    /* filter (e nao opacity): a animacao de entrada fixa a opacidade em 1. */
+    filter: opacity(0.7);
 }
 
 .msg-text {

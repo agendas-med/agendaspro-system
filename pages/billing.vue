@@ -2,7 +2,7 @@
     <section>
         <UtilsPageheader title="Plano e cobrança" subtitle="Escolha seu plano, acompanhe as faturas e as comissões das vendas." />
         <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'billing', tabs)" />
-        <NuxtPage />
+        <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
     </section>
 </template>
 

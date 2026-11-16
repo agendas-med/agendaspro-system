@@ -182,6 +182,7 @@ definePageMeta({ layout: 'login', access: 'public', title: 'Criar conta' })
   height: 4px;
   border-radius: var(--radius-xs);
   background: var(--cinza-medio);
+  transition: background-color var(--motion-base) var(--ease-standard);
 }
 
 .strength-bar span.level-1 {

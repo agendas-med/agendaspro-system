@@ -19,7 +19,7 @@
         </p>
 
         <ul class="conv-items" v-if="!loading && !error && items.length" aria-label="Conversas do WhatsApp">
-            <li v-for="c in items" :key="c.id">
+            <li v-for="(c, convIndex) in items" :key="c.id" class="m-fade-up m-stagger" :style="{ '--i': Math.min(convIndex, 7) }">
                 <button type="button" class="conv-item" :class="{ active: c.id === selectedId }"
                     :aria-current="c.id === selectedId ? 'true' : 'false'" v-on:click="$emit('select', c.id)">
                     <span class="conv-top">
@@ -125,6 +125,7 @@ export default {
     border-radius: var(--radius-md);
     background: var(--branco);
     cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .conv-item:hover {

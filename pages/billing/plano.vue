@@ -51,7 +51,7 @@
 
             <!-- Planos -->
             <div class="plans-grid">
-                <article class="plan-card" v-for="plan in plans" :key="plan.code"
+                <article class="plan-card m-fade-up m-stagger" v-for="(plan, planIndex) in plans" :key="plan.code" :style="{ '--i': Math.min(planIndex, 7) }"
                     :class="{ current: plan.code === entitlement.plan_code }" :aria-labelledby="'plan-' + plan.code">
                     <header>
                         <h3 class="fontsize-md-bold preto" :id="'plan-' + plan.code">{{ plan.name }}</h3>
@@ -244,6 +244,7 @@ export default {
     padding: var(--space-6);
     border: 1px solid var(--cinza-medio);
     border-radius: var(--radius-lg);
+    transition: border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .plan-card.current {

@@ -4,7 +4,14 @@
             <h2 class="fontsize-md-bold preto" :id="id">{{ title }}</h2>
             <slot name="actions" />
         </header>
-        <p class="fontsize-md cinza" role="status" v-if="block.status === 'loading'">Carregando…</p>
+        <div v-if="block.status === 'loading'">
+            <p class="fontsize-md cinza" role="status">Carregando…</p>
+            <div class="skeleton-lines" aria-hidden="true">
+                <span class="skeleton"></span>
+                <span class="skeleton"></span>
+                <span class="skeleton"></span>
+            </div>
+        </div>
         <IntegrationsUpgradeCta v-else-if="block.status === 'locked'" :title="lockedTitle" :text="lockedText" />
         <div v-else-if="block.status === 'error'" role="alert" class="err">
             <p class="fontsize-md preto">{{ block.message || "Não foi possível carregar este bloco." }}</p>
@@ -33,6 +40,25 @@ export default {
 </script>
 
 <style scoped>
+.skeleton-lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
+.skeleton-lines .skeleton {
+    height: 14px;
+}
+
+.skeleton-lines .skeleton:nth-child(2) {
+    width: 80%;
+}
+
+.skeleton-lines .skeleton:nth-child(3) {
+    width: 55%;
+}
+
 .err {
     display: flex;
     flex-direction: column;

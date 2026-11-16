@@ -22,8 +22,8 @@
             <font-awesome icon="clock" aria-hidden="true" /> {{ countdown }}
         </p>
 
-        <div class="action-result" v-if="action.state === 'executed' && action.result" role="status">
-            <p><font-awesome icon="circle-check" aria-hidden="true" /> <strong>Ação executada.</strong></p>
+        <div class="action-result m-fade-up" v-if="action.state === 'executed' && action.result" role="status">
+            <p><font-awesome class="m-check-pop" icon="circle-check" aria-hidden="true" /> <strong>Ação executada.</strong></p>
             <p v-if="action.result.summary">{{ action.result.summary }}</p>
             <dl class="action-rows" v-if="action.result.rows.length">
                 <div v-for="row in action.result.rows" :key="row.key" class="action-row">
@@ -145,6 +145,7 @@ export default {
     border-radius: var(--radius-md);
     background: var(--branco);
     max-width: 640px;
+    transition: border-color var(--motion-base) var(--ease-standard);
 }
 
 .action-card.is-executed {

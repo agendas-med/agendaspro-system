@@ -30,6 +30,15 @@ export default {
         min-width: 44px;
         min-height: 44px;
         margin-left: calc(-1 * var(--space-3));
+        transition: color var(--motion-fast) var(--ease-standard), transform var(--motion-instant) var(--ease-standard);
+    }
+
+    #responsive-menu-button:hover {
+        color: var(--preto);
+    }
+
+    #responsive-menu-button:active {
+        transform: scale(0.94);
     }
 
     .responsive-menu-button {

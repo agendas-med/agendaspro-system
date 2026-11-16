@@ -16,7 +16,7 @@
 
         <template v-else-if="!booting">
             <UtilsTabs v-if="tabs.length > 1" :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'integracoes', tabs)" />
-            <NuxtPage />
+            <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
         </template>
     </section>
 </template>

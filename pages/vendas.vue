@@ -1,4 +1,5 @@
 <template>
+<div>
   <UtilsPageheader title="Vendas" subtitle="Gerencie as vendas realizadas no estabelecimento." />
   <br>
   <UtilsDataTable :loaded="!loading" :dataTable="vendas" :rowsPerPage="7" :newButton="true" @handleNew="newSale"
@@ -46,6 +47,7 @@
   <UtilsModal excludepath="/sales/" @closeModal="$myFunctions.closeModal($.proxy); returnSales()">
     <ModalContentVendas :event="selectedEvent" @savedContent="$myFunctions.closeModal($.proxy, []); returnSales()" />
   </UtilsModal>
+</div>
 </template>
 <script>
 import defaultUserImage from '@/assets/img/default-user-image.png';

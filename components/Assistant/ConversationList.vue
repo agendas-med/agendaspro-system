@@ -90,6 +90,7 @@ export default {
 }
 
 .conv-delete {
+    transition: background-color var(--motion-fast) var(--ease-standard);
     flex: none;
     width: 44px;
     min-height: 44px;
@@ -122,6 +123,7 @@ export default {
     border-radius: var(--radius-md);
     background: var(--branco);
     cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
 }
 
 .conv-item:hover:not(:disabled),

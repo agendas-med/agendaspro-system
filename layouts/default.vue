@@ -28,7 +28,7 @@
                             Para receber Pix automaticamente, configure e aprove sua conta Asaas.
                         </p>
                         <a v-if="onboardingUrl" :href="onboardingUrl" target="_blank"
-                            class="mt-3 inline-block bg-yellow-400 text-yellow-900 px-4 py-2 rounded font-bold text-xs hover:bg-yellow-500 transition">
+                            class="mt-3 inline-block bg-yellow-400 text-yellow-900 px-4 py-2 rounded font-bold text-xs hover:bg-yellow-500 m-press">
                             Enviar Documentos Agora
                         </a>
                     </div>
@@ -108,7 +108,7 @@ export default {
     height: 100vh;
     width: 300px;
     border-right: 1px solid var(--cinza-medio);
-    transition: transform 0.4s, visibility 0s;
+    transition: transform var(--motion-slow) var(--ease-out), visibility 0s;
     z-index: 2;
     /* Menu mais alto que a tela (telas baixas, celular): rola dentro do menu em vez de vazar por cima da página. */
     overflow-y: auto;
@@ -141,7 +141,6 @@ export default {
     position: fixed;
     top: 60px;
     left: 300px;
-    transition: transform 0.4s;
     padding: var(--space-6);
     overflow-y: auto;
 }
@@ -151,7 +150,7 @@ export default {
         transform: translateX(-300px);
         /* Fechado = fora do foco do teclado e dos leitores de tela (some depois da animação). */
         visibility: hidden;
-        transition: transform 0.4s, visibility 0s 0.4s;
+        transition: transform var(--motion-slow) var(--ease-in), visibility 0s var(--motion-slow);
     }
 
     .sidebar {
@@ -185,7 +184,7 @@ export default {
     height: 26.4px;
     color: var(--cinza);
     margin-right: var(--space-6);
-    transition: color 0.4s;
+    transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .sidebar-text {

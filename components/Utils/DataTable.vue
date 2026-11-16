@@ -51,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in paginatedData" :key="item.id">
+          <tr v-for="(item, rowIndex) in paginatedData" :key="item.id" class="m-fade-up m-stagger" :style="{ '--i': Math.min(rowIndex, 7) }">
             <td v-for="(column, colIndex) in columnsToRender" :key="colIndex" :data-th="returnFormatedDataTh(column)" :class="column">
               <template v-if="$slots[`column-${column}`]">
                 <slot :name="`column-${column}`" :item="item"></slot>
@@ -268,6 +268,10 @@ export default {
   padding: var(--space-4);
   text-align: left;
   border-bottom: 1px solid var(--cinza-claro);
+}
+
+.table tr {
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .table tr:hover {

@@ -3,10 +3,11 @@
         <div class="ajax-autocomplete-wrapper" v-on:click="clearContainer()" v-if="entity_search.length > 2 && !force_close"></div>
         <div class="ajax-autocomplete-container">
             <input type="text" aria-label="Buscar" id="ajax-autocomplete-input" :placeholder="entity_object.id == null || entity_object.id == 0 ? '*** para todos' : ''" :disabled="handledisabled" v-model="entity_search">
-            <div class="selected-entity" v-if="entity_object.id != null && entity_object.id != 0">
+            <div class="selected-entity m-scale-in" v-if="entity_object.id != null && entity_object.id != 0">
                 {{ entity_object.name }}
                 <font-awesome icon="times" v-on:click="deselectEntity()" v-if="!handledisabled" class="cursor-pointer" />
             </div>
+            <Transition name="dropdown">
             <div class="entities-list" v-if="entity_search.length > 2 && !force_close">
                 <div class="empty-search" v-if="entity_search.length > 2 && entities_list.length == 0">
                     <p>Nenhum resultado encontrado</p>
@@ -25,6 +26,7 @@
                     </div>
                 </div>
             </div>
+            </Transition>
         </div>
     </div>
 </template>
@@ -204,6 +206,7 @@ export default {
     z-index: 5;
     width: 100%;
     overflow: hidden;
+    transform-origin: top;
 }
 .entity-line {
     display: flex;
@@ -219,6 +222,7 @@ export default {
 .entity {
     padding: var(--space-3);
     cursor: pointer;
+    transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
     .entity:hover {

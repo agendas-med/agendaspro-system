@@ -1,4 +1,5 @@
 <template>
+<div>
   <UtilsPageheader title="Agenda" subtitle="Organize seus horários e acompanhe seus agendamentos." />
   <div class="calendar-container">
     <div class="calendar-header flex justify-between">
@@ -40,7 +41,7 @@
       <ModalContentAgenda :event="selectedEvent" @savedContent="$myFunctions.closeModal($.proxy); getEvents(true);" />
     </UtilsModal>
   </div>
-
+</div>
 </template>
 <script>
 import FullCalendar from '@fullcalendar/vue3';
@@ -515,6 +516,7 @@ export default {
   border: none;
   text-align: center;
   padding: 0;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .input-selecao-periodo .frame-botao {
@@ -525,7 +527,7 @@ export default {
   width: calc((100% - 6px) / 3);
   height: 90%;
   border-radius: var(--radius-md);
-  transition: transform 0.4s;
+  transition: transform var(--motion-base) var(--ease-out);
   z-index: 1;
 }
 

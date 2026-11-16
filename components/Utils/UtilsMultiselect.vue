@@ -7,11 +7,11 @@
         </span>
         <font-awesome icon="angle-down" class="arrow" />
       </div>
-      <ul v-if="isOpen" class="dropdown">
+      <Transition name="dropdown"><ul v-if="isOpen" class="dropdown">
         <li v-for="item in options" :key="item.id" @click="toggleSelection(item)" :class="{ selected: isSelected(item) }">
           {{ item.name }} ({{ item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }})
         </li>
-      </ul>
+      </ul></Transition>
     </div>
     <div class="wrapper" v-on:click="toggleDropdown()" v-if="isOpen"></div>
   </template>
@@ -72,6 +72,12 @@
     justify-content: space-between;
     align-items: center;
   }
+  .arrow {
+    transition: transform var(--motion-base) var(--ease-out);
+  }
+  .focus .arrow {
+    transform: rotate(-180deg);
+  }
   .placeholder {
     color: var(--preto);
   }
@@ -101,11 +107,12 @@
     max-height: 200px;
     overflow-y: auto;
     z-index: 10;
+    transform-origin: top;
   }
   .dropdown li {
     padding: 10px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
   }
   .dropdown li:hover {
     background: #f0f0f0;

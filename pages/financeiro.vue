@@ -2,7 +2,7 @@
     <section>
         <UtilsPageheader title="Financeiro" subtitle="Organize as finanças do seu negócio com facilidade." />
         <UtilsTabs :tabs="tabs" @changedTab="$myFunctions.goToSubRoute($.proxy, $event, 'financeiro', tabs)" />
-        <NuxtPage/>
+        <NuxtPage :transition="{ name: 'tab-swap', mode: 'out-in' }" />
     </section>
 </template>
 <script>

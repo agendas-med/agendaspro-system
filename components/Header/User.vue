@@ -10,7 +10,7 @@
             <font-awesome icon="angle-down" class="dropdown-button cinza" aria-hidden="true"
                 :class="dropdownOpened ? 'rotated' : ''" />
         </button>
-        <transition name="fade">
+        <transition name="dropdown">
             <div v-if="dropdownOpened" id="user-menu" class="user-dropdown" role="menu" v-on:keydown.esc="closeDropdown()">
                 <ul>
                 <li role="none" v-on:click="toggleDropdown()">
@@ -75,6 +75,7 @@ export default {
     z-index: 5;
     right: 0;
     white-space: nowrap;
+    transform-origin: top right;
 }
 
 .user-container {
@@ -87,7 +88,7 @@ export default {
 
 li {
     padding: var(--space-3) var(--space-6);
-    transition: background 0.4s;
+    transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 li button {
@@ -116,7 +117,7 @@ li button {
 }
 
 .dropdown-button {
-    transition: transform 0.4s;
+    transition: transform var(--motion-base) var(--ease-out);
 }
 
 .rotated {

@@ -7,7 +7,7 @@
             </p>
             <div class="usage-bar" role="progressbar" :aria-valuenow="usage.percent" aria-valuemin="0" aria-valuemax="100"
                 :aria-label="usage.percent + '% da cota mensal usada'">
-                <div class="usage-fill" :class="usage.tone" :style="{ width: usage.percent + '%' }"></div>
+                <div class="usage-fill m-bar-fill" :class="usage.tone" :style="{ width: usage.percent + '%' }"></div>
             </div>
             <p class="fontsize-sm usage-alert" role="status" v-if="usage.exhausted">
                 A cota do mês acabou. O assistente volta a responder no próximo ciclo ou com um plano maior.
@@ -70,7 +70,6 @@ export default {
 .usage-fill {
     height: 100%;
     background: var(--verde-escuro);
-    transition: width 0.3s;
 }
 
 .usage-fill.yellow {
