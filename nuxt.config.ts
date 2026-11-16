@@ -18,6 +18,9 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2024-04-03',
   app: {
+    // Troca de rota e de layout: fade curto (tokens em assets/css/motion.css). Só opacidade, sem transform.
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'layout', mode: 'out-in' },
     head: {
       htmlAttrs: {
         lang: 'pt-BR',
@@ -55,7 +58,7 @@ export default defineNuxtConfig({
     port: 8080
   },
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '~/assets/css/integrations.css', '~/assets/css/ui.css', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/integrations.css', '~/assets/css/ui.css', '~/assets/css/motion.css', '@fortawesome/fontawesome-svg-core/styles.css'],
   fontawesome: {
     icons: {
       solid: ['face-smile', 'child', 'archive', 'envelope', 'pen-clip', 'circle', 'comment', 'times', 'store', 'calendar-day', 'user-group',

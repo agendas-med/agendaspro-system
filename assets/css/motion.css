@@ -1,0 +1,541 @@
+/*
+ * Sistema de motion do painel: tokens, keyframes, utilitários e transições do Vue.
+ *
+ * Regras:
+ *  - anime só transform, opacity, color, background, border-color e box-shadow (nunca width/height/top/left;
+ *    exceção: barras de progresso, que crescem por scaleX na montagem e mudam de width em transição curta);
+ *  - nada acima de --motion-slow (320ms) em interação; nada infinito além de spinner, skeleton e pulse-soft;
+ *  - tudo respeita prefers-reduced-motion (bloco no fim do arquivo).
+ */
+:root {
+    /* Durações */
+    --motion-instant: 90ms;
+    --motion-fast: 150ms;
+    --motion-base: 220ms;
+    --motion-slow: 320ms;
+
+    /* Curvas */
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
+
+    /* Distâncias */
+    --motion-shift: 8px;
+    --motion-scale: 0.97;
+
+    /* Elevação de hover (botões e cartões clicáveis) */
+    --motion-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Keyframes reutilizáveis (o spinner `spin` fica em main.css) ---------- */
+
+@keyframes m-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes m-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(var(--motion-shift));
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes m-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(var(--motion-scale));
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes m-slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes m-shimmer {
+    from {
+        background-position: 100% 0;
+    }
+
+    to {
+        background-position: -100% 0;
+    }
+}
+
+/* Anel suave: só em selos de atenção. */
+@keyframes m-pulse-soft {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 204, 23, 0.55);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(255, 204, 23, 0);
+    }
+}
+
+@keyframes m-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-4px);
+    }
+
+    40% {
+        transform: translateX(4px);
+    }
+
+    60% {
+        transform: translateX(-3px);
+    }
+
+    80% {
+        transform: translateX(2px);
+    }
+}
+
+@keyframes m-check-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.12);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes m-bar-grow {
+    from {
+        transform: scaleX(0);
+    }
+
+    to {
+        transform: scaleX(1);
+    }
+}
+
+/* ---------- Utilitários ---------- */
+
+/* Botões e ícones clicáveis: hover com leve elevação, active com escala. */
+.m-press,
+.btn,
+.rounded-btn,
+.rounded-button,
+.icon-btn {
+    transition:
+        background-color var(--motion-fast) var(--ease-standard),
+        color var(--motion-fast) var(--ease-standard),
+        border-color var(--motion-fast) var(--ease-standard),
+        box-shadow var(--motion-fast) var(--ease-standard),
+        transform var(--motion-instant) var(--ease-standard);
+}
+
+.m-press:hover:not(:disabled):not([aria-disabled="true"]),
+.btn:hover:not(:disabled):not(.btn-loading),
+.rounded-btn:hover:not(:disabled) {
+    box-shadow: var(--motion-hover-shadow);
+}
+
+.m-press:active:not(:disabled):not([aria-disabled="true"]),
+.btn:active:not(:disabled):not(.btn-loading),
+.rounded-btn:active:not(:disabled),
+.rounded-button:active,
+.icon-btn:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: none;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background-color: var(--cinza-claro);
+}
+
+/* Links: troca de cor suave. */
+a {
+    transition: color var(--motion-fast) var(--ease-standard);
+}
+
+/* Cartões clicáveis. */
+.m-lift {
+    transition:
+        transform var(--motion-base) var(--ease-out),
+        box-shadow var(--motion-base) var(--ease-out),
+        border-color var(--motion-fast) var(--ease-standard);
+}
+
+.m-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--motion-hover-shadow);
+}
+
+.m-lift:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Entrada de listas: .m-stagger recebe --i (0 a 7) em style. */
+.m-fade-up {
+    animation: m-fade-up var(--motion-base) var(--ease-out) both;
+}
+
+.m-fade-in {
+    animation: m-fade-in var(--motion-base) var(--ease-standard) both;
+}
+
+.m-scale-in {
+    animation: m-scale-in var(--motion-base) var(--ease-out) both;
+}
+
+.m-stagger {
+    animation-delay: calc(var(--i, 0) * 25ms);
+}
+
+/* Estados vazios e avisos entram com fade-up curto (sem classe extra nos componentes). */
+.empty-state,
+.empty-datatable,
+.ui-notice {
+    animation: m-fade-up var(--motion-base) var(--ease-out) both;
+}
+
+/* Carregamento. */
+.skeleton {
+    display: block;
+    min-height: 1em;
+    border-radius: var(--radius-xs);
+    color: transparent;
+    background: linear-gradient(90deg, var(--cinza-claro) 30%, #ececec 50%, var(--cinza-claro) 70%);
+    background-size: 300% 100%;
+    animation: m-shimmer 1.4s linear infinite;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Selo de atenção (só com contagem maior que zero). */
+.m-pulse-soft {
+    animation: m-pulse-soft 2.4s ease-in-out infinite;
+}
+
+.m-shake {
+    animation: m-shake var(--motion-slow) var(--ease-standard) both;
+}
+
+.m-check-pop {
+    animation: m-check-pop var(--motion-slow) var(--ease-spring) both;
+}
+
+/* Barra de progresso: nasce em 0 (scaleX) e acompanha mudanças de width em transição curta. */
+.m-bar-fill {
+    transform-origin: left center;
+    animation: m-bar-grow var(--motion-slow) var(--ease-out) both;
+    transition: width var(--motion-base) var(--ease-standard);
+}
+
+/* Erro de campo: o aviso entra com shake curto; o campo marcado com aria-invalid também. */
+.inline-error {
+    animation: m-shake var(--motion-slow) var(--ease-standard) both;
+}
+
+[aria-invalid="true"],
+.custom-invalid.invalid {
+    animation: m-shake var(--motion-slow) var(--ease-standard) both;
+}
+
+/* Campos: foco e hover suaves (sem `all`). */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select,
+.input {
+    transition:
+        border-color var(--motion-fast) var(--ease-standard),
+        box-shadow var(--motion-fast) var(--ease-standard),
+        background-color var(--motion-fast) var(--ease-standard);
+}
+
+/* ---------- Transições do Vue (<Transition name="..."> / <TransitionGroup name="...">) ---------- */
+
+/* fade: opacidade simples (menus, selos, painéis). */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* dropdown: menus suspensos abrindo a partir do gatilho. */
+.dropdown-enter-active {
+    transition:
+        opacity var(--motion-base) var(--ease-out),
+        transform var(--motion-base) var(--ease-out);
+}
+
+.dropdown-leave-active {
+    transition:
+        opacity var(--motion-instant) var(--ease-in),
+        transform var(--motion-instant) var(--ease-in);
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+    opacity: 0;
+    transform: translateY(-4px) scale(var(--motion-scale));
+}
+
+/* modal: o elemento raiz é o overlay (fade); o painel leva a classe .m-panel (scale + translate). */
+.modal-enter-active {
+    transition: opacity var(--motion-base) var(--ease-standard);
+}
+
+.modal-leave-active {
+    transition: opacity var(--motion-fast) var(--ease-in);
+    pointer-events: none;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
+}
+
+.modal-enter-active .m-panel {
+    transition:
+        transform var(--motion-base) var(--ease-out),
+        opacity var(--motion-base) var(--ease-standard);
+}
+
+.modal-leave-active .m-panel {
+    transition:
+        transform var(--motion-fast) var(--ease-in),
+        opacity var(--motion-fast) var(--ease-in);
+}
+
+.modal-enter-from .m-panel,
+.modal-leave-to .m-panel {
+    opacity: 0;
+    transform: translateY(var(--motion-shift)) scale(var(--motion-scale));
+}
+
+/* slide-right: gavetas que entram pela direita. */
+.slide-right-enter-active {
+    transition:
+        transform var(--motion-slow) var(--ease-out),
+        opacity var(--motion-base) var(--ease-standard);
+}
+
+.slide-right-leave-active {
+    transition:
+        transform var(--motion-base) var(--ease-in),
+        opacity var(--motion-base) var(--ease-in);
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+    opacity: 0;
+    transform: translateX(24px);
+}
+
+/* list: <TransitionGroup> com entrada, saída e reordenação. */
+.list-enter-active {
+    transition:
+        opacity var(--motion-base) var(--ease-out),
+        transform var(--motion-base) var(--ease-out);
+}
+
+.list-leave-active {
+    transition:
+        opacity var(--motion-fast) var(--ease-in),
+        transform var(--motion-fast) var(--ease-in);
+}
+
+.list-move {
+    transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.list-enter-from,
+.list-leave-to {
+    opacity: 0;
+    transform: translateY(var(--motion-shift));
+}
+
+/* tab-swap: troca de conteúdo de abas (use mode="out-in"). */
+.tab-swap-enter-active {
+    transition:
+        opacity var(--motion-base) var(--ease-out),
+        transform var(--motion-base) var(--ease-out);
+}
+
+.tab-swap-leave-active {
+    transition: opacity var(--motion-instant) var(--ease-in);
+}
+
+.tab-swap-enter-from {
+    opacity: 0;
+    transform: translateY(var(--motion-shift));
+}
+
+.tab-swap-leave-to {
+    opacity: 0;
+}
+
+/* expand: área que se abre/fecha. Não anima height (evita layout shift): entra com opacidade e deslocamento curto. */
+.expand-enter-active {
+    transition:
+        opacity var(--motion-base) var(--ease-out),
+        transform var(--motion-base) var(--ease-out);
+    transform-origin: top;
+}
+
+.expand-leave-active {
+    transition: opacity var(--motion-fast) var(--ease-in);
+}
+
+.expand-enter-from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-shift) * -1));
+}
+
+.expand-leave-to {
+    opacity: 0;
+}
+
+/* toast: entra pela direita e sai com fade. */
+.toast-enter-active {
+    transition:
+        opacity var(--motion-base) var(--ease-out),
+        transform var(--motion-base) var(--ease-out);
+}
+
+.toast-leave-active {
+    transition:
+        opacity var(--motion-fast) var(--ease-in),
+        transform var(--motion-fast) var(--ease-in);
+}
+
+.toast-move {
+    transition: transform var(--motion-base) var(--ease-standard);
+}
+
+.toast-enter-from {
+    opacity: 0;
+    transform: translateX(16px);
+}
+
+.toast-leave-to {
+    opacity: 0;
+    transform: translateX(8px);
+}
+
+/* page / layout: troca de rota (nuxt.config), só opacidade para não prender position: fixed. */
+.page-enter-active,
+.layout-enter-active {
+    transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.page-leave-active,
+.layout-leave-active {
+    transition: opacity var(--motion-instant) var(--ease-in);
+}
+
+.page-enter-from,
+.page-leave-to,
+.layout-enter-from,
+.layout-leave-to {
+    opacity: 0;
+}
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-delay: 0s !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0s !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Sem deslocamento nem escala: só a opacidade (instantânea). */
+    .m-press:hover,
+    .m-press:active,
+    .btn:active,
+    .rounded-btn:active,
+    .rounded-button:active,
+    .icon-btn:active,
+    .m-lift:hover,
+    .m-lift:active {
+        transform: none !important;
+    }
+
+    .modal-enter-from .m-panel,
+    .modal-leave-to .m-panel,
+    .dropdown-enter-from,
+    .dropdown-leave-to,
+    .slide-right-enter-from,
+    .slide-right-leave-to,
+    .list-enter-from,
+    .list-leave-to,
+    .tab-swap-enter-from,
+    .expand-enter-from,
+    .toast-enter-from,
+    .toast-leave-to {
+        transform: none !important;
+    }
+
+    /* Skeleton e selo ficam estáticos. */
+    .skeleton {
+        background: var(--cinza-claro);
+        animation: none !important;
+    }
+
+    .m-pulse-soft {
+        animation: none !important;
+    }
+
+    /* O spinner é feedback essencial: segue girando, mas lento e simples. */
+    .btn-loading::after,
+    .spinner {
+        animation-duration: 2.4s !important;
+        animation-iteration-count: infinite !important;
+    }
+
+    .spinner .path {
+        animation: none !important;
+        stroke-dasharray: 60, 150;
+    }
+}
