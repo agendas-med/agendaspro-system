@@ -89,13 +89,14 @@ export default {
 }
 
 .conv-filter select {
-    height: 40px;
+    height: 44px;
 }
 
 .conv-state {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: var(--space-4);
     padding: var(--space-4);
 }

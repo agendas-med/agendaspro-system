@@ -43,3 +43,27 @@
     width: auto;
     max-width: none;
 }
+
+/* Estado vazio ou de erro de uma area: mensagem curta e, se houver, uma acao. */
+.empty-state,
+.empty-datatable {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-7) var(--space-5);
+    text-align: center;
+}
+
+.empty-state h2,
+.empty-datatable h2 {
+    font-size: var(--fontsize-md);
+    font-weight: 600;
+    color: var(--preto);
+}
+
+.empty-state .btn,
+.empty-datatable .btn {
+    width: auto;
+    margin: 0;
+}

@@ -255,10 +255,6 @@ export default {
     }
   }
 
-  .empty-datatable {
-    padding: var(--space-4);
-  }
-
 .table {
   width: 100%;
   border-collapse: collapse;

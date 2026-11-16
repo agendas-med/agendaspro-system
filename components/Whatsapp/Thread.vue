@@ -415,7 +415,8 @@ export default {
 .thread-state {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: var(--space-4);
     padding: var(--space-6);
 }
