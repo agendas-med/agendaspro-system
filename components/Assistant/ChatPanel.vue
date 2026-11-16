@@ -29,19 +29,21 @@
                         <p class="msg-flag fontsize-sm" v-if="m.state === 'unknown'">
                             Não sei se esta mensagem chegou ao servidor. Aguarde a verificação antes de enviar de novo.
                         </p>
-                        <p class="msg-flag fontsize-sm" v-if="degraded(m)">{{ degradedText(m) }}</p>
+                        <p class="msg-degraded fontsize-sm cinza" v-if="m.role === 'assistant' && degradedText(m)">
+                            <font-awesome icon="triangle-exclamation" aria-hidden="true" /> {{ degradedText(m) }}
+                        </p>
 
                         <p class="msg-sources fontsize-sm cinza" v-if="m.citations && m.citations.length">
                             <font-awesome icon="book-open" aria-hidden="true" /> Fontes consultadas: {{ citationSummary(m.citations) }}
                         </p>
                     </li>
                     <li class="msg-action" v-for="a in actionsFor(m.key)" :key="a.actionId">
-                        <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" />
+                        <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" @reissue="onReissue" />
                     </li>
                 </template>
 
                 <li class="msg-action" v-for="a in looseActions" :key="a.actionId">
-                    <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" />
+                    <AssistantActionCard :action="a" @confirm="onConfirm" @reject="onReject" @verify="onVerify" @reissue="onReissue" />
                 </li>
             </ul>
 
@@ -88,7 +90,7 @@
 </template>
 
 <script>
-import { MAX_MESSAGE_LENGTH, conversationLabel, formatWhen, sourceLabel } from '../../utils/assistant.js';
+import { MAX_MESSAGE_LENGTH, conversationLabel, formatWhen, degradedNotice } from '../../utils/assistant.js';
 import { cooldownLeft } from '../../utils/assistantController.js';
 
 // Painel de conversa. A tela só dispara o controlador ($assistant); nenhuma escrita acontece sem clique do usuário.
@@ -136,11 +138,9 @@ export default {
         actionsFor(key) {
             return this.state.actions.filter((a) => a.anchor === key && a.conversationId === this.state.activeId);
         },
-        degraded(m) {
-            return m.role === "assistant" && (m.source === "template" || m.source === "fallback");
-        },
+        // Aviso discreto só quando a resposta está degradada (A2); texto puro, nunca HTML.
         degradedText(m) {
-            return sourceLabel(m.source) + ": esta resposta não veio da IA.";
+            return degradedNotice(m.source, m.degraded);
         },
         citationSummary(list) {
             const counts = new Map();
@@ -170,7 +170,9 @@ export default {
         },
         onConfirm(id) { this.$assistant.confirm(id); },
         onReject(id) { this.$assistant.reject(id); },
-        onVerify(id) { this.$assistant.verifyAction(id); }
+        onVerify(id) { this.$assistant.verifyAction(id); },
+        // Só gera um token novo (não confirma): depois o usuário ainda clica em Confirmar.
+        onReissue(id) { this.$assistant.reissueToken(id); }
     }
 }
 </script>
@@ -262,6 +264,10 @@ export default {
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-md);
     background: var(--amarelo-claro);
+}
+
+.msg-degraded {
+    margin-top: var(--space-1);
 }
 
 .msg-action {

@@ -33,8 +33,8 @@
             </dl>
         </div>
 
-        <p class="action-note fontsize-sm" v-if="action.state === 'pending' && !action.token" role="note">
-            Esta ação vem do histórico e não pode mais ser confirmada aqui. Peça novamente ao assistente para executá-la, ou rejeite esta proposta.
+        <p class="action-note fontsize-sm" v-if="needsToken" role="note">
+            Esta ação vem do histórico. Para confirmá-la, prepare a confirmação: isso só gera uma nova autorização, nada é executado até você clicar em Confirmar.
         </p>
         <p class="action-note fontsize-sm" v-else-if="isOpen && expired" role="note">
             O prazo para confirmar acabou. Peça novamente ao assistente.
@@ -45,6 +45,15 @@
         <div class="action-buttons" v-if="isOpen">
             <template v-if="action.state === 'unknown'">
                 <button type="button" class="btn btn-primary" v-on:click="$emit('verify', action.actionId)">Verificar situação</button>
+            </template>
+            <template v-else-if="needsToken || action.state === 'reissuing'">
+                <button type="button" class="btn btn-primary" :class="{ 'btn-loading': action.state === 'reissuing' }"
+                    :disabled="busy || expired" v-on:click="$emit('reissue', action.actionId)">
+                    Preparar confirmação
+                </button>
+                <button type="button" class="btn btn-cinza" :disabled="busy" v-on:click="$emit('reject', action.actionId)">
+                    Rejeitar
+                </button>
             </template>
             <template v-else>
                 <button type="button" class="btn btn-primary" :class="{ 'btn-loading': action.state === 'confirming' }"
@@ -72,7 +81,7 @@ export default {
     props: {
         action: { type: Object, required: true }
     },
-    emits: ["confirm", "reject", "verify"],
+    emits: ["confirm", "reject", "verify", "reissue"],
     data() {
         return { now: Date.now(), timer: null };
     },
@@ -95,12 +104,16 @@ export default {
             if (s === "expired" || s === "unknown") return "yellow";
             return "";
         },
-        // pending/unknown/confirming/rejecting: ainda aberta (não terminou).
+        // pending/unknown/reissuing/confirming/rejecting: ainda aberta (não terminou).
         isOpen() {
-            return ["pending", "unknown", "confirming", "rejecting"].includes(this.action.state);
+            return ["pending", "unknown", "reissuing", "confirming", "rejecting"].includes(this.action.state);
         },
         busy() {
-            return this.action.state === "confirming" || this.action.state === "rejecting";
+            return ["reissuing", "confirming", "rejecting"].includes(this.action.state);
+        },
+        // Proposta do histórico: sem token em memória. Gerar um novo é um clique explícito (nunca automático).
+        needsToken() {
+            return this.action.state === "pending" && !this.action.token && !this.expired;
         },
         expired() {
             return isExpired(this.action.expiresAt, this.now);

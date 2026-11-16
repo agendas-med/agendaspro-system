@@ -42,8 +42,8 @@ export default {
         async boot(force) {
             this.booting = true;
             try {
+                // A sonda é GET /assistant/status: já traz plano, cota e o que o usuário pode fazer (antes da 1ª mensagem).
                 await this.$assistant.probe(force);
-                if (this.$assistant.state.status === "enabled" && !this.$assistant.state.plan) this.$assistant.loadPlan();
             } finally {
                 this.booting = false;
             }

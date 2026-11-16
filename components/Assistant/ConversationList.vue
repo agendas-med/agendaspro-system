@@ -11,7 +11,7 @@
         </p>
 
         <ul class="conv-items" v-if="items.length" aria-label="Conversas com o assistente">
-            <li v-for="c in items" :key="c.id">
+            <li class="conv-row" v-for="c in items" :key="c.id">
                 <button type="button" class="conv-item" :class="{ active: c.id === activeId }" :disabled="disabled"
                     :aria-current="c.id === activeId ? 'true' : 'false'" v-on:click="$emit('select', c.id)">
                     <span class="conv-top">
@@ -19,6 +19,11 @@
                         <span class="conv-time fontsize-sm cinza">{{ when(c) }}</span>
                     </span>
                     <span class="conv-count fontsize-sm cinza">{{ count(c) }}</span>
+                </button>
+                <button type="button" class="conv-delete" :class="{ 'btn-loading': c.id === deletingId }"
+                    :disabled="disabled || !!deletingId" :aria-label="'Apagar conversa: ' + label(c)"
+                    :title="'Apagar conversa'" v-on:click="$emit('delete', c.id)">
+                    <font-awesome icon="trash-can" aria-hidden="true" />
                 </button>
             </li>
         </ul>
@@ -34,9 +39,12 @@ export default {
         activeId: { type: String, default: "" },
         loading: { type: Boolean, default: false },
         // Trocar de conversa no meio de um envio faria o histórico mudar embaixo da resposta.
-        disabled: { type: Boolean, default: false }
+        disabled: { type: Boolean, default: false },
+        // Conversa sendo apagada agora (só uma por vez).
+        deletingId: { type: String, default: "" }
     },
-    emits: ["select", "new"],
+    // "delete" só pede a exclusão: a confirmação com o usuário e a chamada ao core ficam na página/controlador.
+    emits: ["select", "new", "delete"],
     methods: {
         label(c) { return conversationLabel(c); },
         when(c) { return formatListWhen(c.updatedAt || c.createdAt); },
@@ -75,7 +83,34 @@ export default {
     max-height: 480px;
 }
 
+.conv-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-2);
+}
+
+.conv-delete {
+    flex: none;
+    width: 40px;
+    border: 1px solid var(--cinza-medio);
+    border-radius: var(--radius-md);
+    background: var(--branco);
+    color: var(--vermelho);
+    cursor: pointer;
+}
+
+.conv-delete:hover:not(:disabled) {
+    background: var(--amarelo-claro);
+}
+
+.conv-delete:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .conv-item {
+    flex: 1;
+    min-width: 0;
     width: 100%;
     display: flex;
     flex-direction: column;
