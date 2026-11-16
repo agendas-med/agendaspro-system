@@ -17,6 +17,11 @@
 //   "premium"  -> 402 de recurso (feature), sem gravar a pergunta nem gastar cota (A7)
 //   "desligar" -> 503 actions_disabled, sem gravar a pergunta nem gastar cota (A7)
 //   "degradar" -> resposta source=fallback (degraded)             "semia"   -> resposta source=template, degraded=true
+//
+// F6 (integrações): MOCK_IG e MOCK_GCAL = disconnected (padrão) | connected | reauth | notconfigured (503) | off (404, core sem F6).
+//   Rotas /integrations/instagram/* e /integrations/google-calendar/*, /professionals, GET /time-blocks e /mock/authorize/*.
+//   Free: 402 em insights/conversão/links não-bio e na conexão do Google. "sync" responde 429 após 6 chamadas.
+//   MOCK_ROLE=member: 403 admin_required nas ações de admin. Para simular o usuário recusando no provedor, acrescente &deny=1 à URL.
 // Não tem segredos nem acesso a nada: tudo em memória.
 import http from 'node:http';
 
@@ -246,6 +251,186 @@ async function handleAssistant(req, res, url, body) {
   return send(res, 404, { message: 'rota do mock não implementada' });
 }
 
+// ---- Integrações (F6): Instagram e Google Agenda -----------------------------------------------------------
+// MOCK_IG / MOCK_GCAL: disconnected (padrão) | connected | reauth | notconfigured | off (404, como um core sem a F6)
+//   MOCK_ROLE=member  -> ações de admin respondem 403 admin_required     MOCK_PLAN=free -> 402 nos recursos Premium
+// O "login" do provedor é simulado: GET /mock/authorize/<provider>?redirect_uri&state devolve 302 para a redirect_uri
+// (somente http://localhost) com ?code&state. "?deny=1" simula o usuário recusando.
+const IG_MODE = process.env.MOCK_IG || 'disconnected';
+const GC_MODE = process.env.MOCK_GCAL || 'disconnected';
+const premium = PLAN !== 'free';
+const isAdmin = ROLE === 'admin';
+const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+
+const ig = {
+  connected: IG_MODE === 'connected' || IG_MODE === 'reauth',
+  reauth: IG_MODE === 'reauth',
+  state: '',
+  links: [{ id: 1, label: 'Bio do perfil', utm_source: 'instagram', utm_medium: 'bio', utm_campaign: '', utm_content: '', url: 'http://localhost:3000/p/studio-teste?utm_source=instagram&utm_medium=bio', created_at: nowIso(), public_page_ready: true }],
+  nextLink: 2,
+};
+const igAccount = () => ({
+  ig_user_id: '1784', username: 'studio_teste', name: 'Studio Teste', account_type: 'BUSINESS', profile_picture_url: null,
+  followers_count: 12840, follows_count: 312, media_count: 214, status: ig.reauth ? 'reauth_required' : 'active', scopes: ['instagram_business_basic'],
+  connected_at: nowIso(), token_expires_at: new Date(Date.now() + 40 * 86400000).toISOString(), profile_synced_at: nowIso(), media_synced_at: nowIso(), rate_limited_until: null,
+});
+const igPosts = Array.from({ length: 30 }, (_, i) => ({
+  media_id: String(9000 + i), caption: i === 2 ? 'Promoção de novembro: <script>alert(1)</script> corte + escova com 20% de desconto para quem agendar pelo link da bio. Vagas limitadas, corre!' : `Post ${i + 1}: resultado do dia no Studio Teste #beleza`,
+  media_type: i % 5 === 0 ? 'VIDEO' : i % 3 === 0 ? 'CAROUSEL_ALBUM' : 'IMAGE', media_product_type: i % 5 === 0 ? 'REELS' : 'FEED',
+  permalink: `https://www.instagram.com/p/mock${i}/`, thumbnail_url: null, posted_at: new Date(Date.now() - i * 2 * 86400000).toISOString(),
+  like_count: 120 - i * 3, comments_count: 14 - (i % 9), engagement_rate: 0.08 - i * 0.002, engagement_basis: 'reach',
+  insights: { reach: 2400 - i * 40, views: 3100 - i * 50, saved: 30 - i, shares: 12 - (i % 8), total_interactions: 160 - i * 4 },
+}));
+const igHistory = Array.from({ length: 30 }, (_, i) => ({
+  snapshot_date: day(i - 29), followers_count: 12400 + i * 15, reach: 1800 + ((i * 97) % 600) + i * 20, views: 2500 + ((i * 131) % 700) + i * 25,
+  total_interactions: 300 + ((i * 53) % 160), profile_links_taps: i % 6 === 0 ? null : 20 + ((i * 7) % 25),
+}));
+
+function handleInstagram(req, res, url, body) {
+  const path = url.pathname.replace('/integrations/instagram', '') || '/';
+  const method = req.method;
+  if (IG_MODE === 'off') return send(res, 404, { message: 'rota do mock não implementada' });
+  if (path === '/status') {
+    if (IG_MODE === 'notconfigured') return coded(res, 503, 'instagram_not_configured', 'Integração indisponível.');
+    return send(res, 200, { data: { configured: true, connected: ig.connected, account: ig.connected ? igAccount() : null } });
+  }
+  if (path === '/connect/start' && method === 'POST') {
+    if (!isAdmin) return coded(res, 403, 'admin_required', 'Apenas administradores podem conectar o Instagram.');
+    ig.state = 'igstate_' + Math.random().toString(36).slice(2);
+    const q = new URLSearchParams({ redirect_uri: String(body.redirect_uri || ''), state: ig.state });
+    return send(res, 200, { data: { authorize_url: `http://localhost:${PORT}/mock/authorize/instagram?${q}`, state: ig.state } });
+  }
+  if (path === '/callback' && method === 'POST') {
+    if (!ig.state || body.state !== ig.state) return coded(res, 400, 'oauth_state_invalid', 'Autorização expirada ou inválida. Tente conectar novamente.');
+    ig.state = '';
+    ig.connected = true; ig.reauth = false;
+    return send(res, 200, { data: { configured: true, connected: true, account: igAccount() } });
+  }
+  if (!ig.connected) return coded(res, 404, 'instagram_not_connected', 'Instagram não conectado.');
+  if (path === '/disconnect' && method === 'POST') {
+    if (!isAdmin) return coded(res, 403, 'admin_required', 'Apenas administradores.');
+    ig.connected = false; ig.reauth = false;
+    return send(res, 200, { data: { disconnected: true } });
+  }
+  if (ig.reauth && path !== '/utm-links') return coded(res, 409, 'instagram_reauth_required', 'Reconecte o Instagram.');
+  if (path === '/overview' || (path === '/refresh' && method === 'POST')) {
+    return send(res, 200, { data: { account: igAccount(), engagement: { posts_considered: 12, interactions: 1840, avg_interactions: 153.3, engagement_rate: 0.0532, engagement_basis: 'reach' }, stale: false, premium } });
+  }
+  if (path === '/posts') {
+    const limit = premium ? Number(url.searchParams.get('limit') || 12) : 6;
+    const from = Number(url.searchParams.get('before') || 0);
+    const items = igPosts.slice(from, from + limit);
+    const next = premium && from + limit < igPosts.length ? String(from + limit) : null;
+    return send(res, 200, { data: { items, next_before: next, limit_total: premium ? null : 6, stale: false } });
+  }
+  if (path === '/insights') {
+    if (!premium) return coded(res, 402, 'plan_upgrade_required', 'Insights são do plano Premium.', { feature: 'instagram' });
+    const days = Number(url.searchParams.get('days') || 30);
+    const top = igPosts.slice(0, 3).map((p) => p.media_id);
+    return send(res, 200, { data: {
+      account_insights: { period_days: 28, reach: 18400, views: 25100, accounts_engaged: 940, total_interactions: 2210, profile_links_taps: 186 },
+      posts: igPosts.slice(0, 12), engagement: { posts_considered: 12, interactions: 1840, avg_interactions: 153.3, engagement_rate: 0.0532, engagement_basis: 'reach' },
+      comparison: { top, bottom: igPosts.slice(9, 12).map((p) => p.media_id), by_type: [{ type: 'REELS', posts_considered: 3, avg_interactions: 210, engagement_rate: 0.07 }, { type: 'IMAGE', posts_considered: 7, avg_interactions: 120, engagement_rate: 0.04 }] },
+      history: igHistory.slice(-Math.min(days, 30)), stale: false } });
+  }
+  if (path === '/conversion') {
+    if (!premium) return coded(res, 402, 'plan_upgrade_required', 'Conversão é do plano Premium.', { feature: 'instagram' });
+    return send(res, 200, { data: { period: { from: url.searchParams.get('from'), to: url.searchParams.get('to') }, totals: { profile_links_taps: 186, visits: 142, bookings: 23, visit_to_booking_rate: 0.162, revenue_estimated_cents: 345000, revenue_paid_cents: 180000 },
+      by_campaign: [{ utm_campaign: 'promo-novembro', visits: 80, bookings: 15, revenue_estimated_cents: 225000 }, { utm_campaign: '', visits: 62, bookings: 8, revenue_estimated_cents: 120000 }] } });
+  }
+  if (path === '/utm-links') return send(res, 200, { data: ig.links });
+  if (path === '/utm-link' && method === 'POST') {
+    if (body.placement !== 'bio' && !premium) return coded(res, 402, 'plan_upgrade_required', 'Links por post, story e campanha são do plano Premium.', { feature: 'instagram' });
+    const link = { id: ig.nextLink++, label: body.label || '', utm_source: 'instagram', utm_medium: body.placement, utm_campaign: body.campaign || '', utm_content: body.content || '', created_at: nowIso(), public_page_ready: true,
+      url: `http://localhost:3000/p/studio-teste?utm_source=instagram&utm_medium=${body.placement}${body.campaign ? '&utm_campaign=' + body.campaign : ''}${body.content ? '&utm_content=' + body.content : ''}` };
+    ig.links.unshift(link);
+    return send(res, 201, { data: link });
+  }
+  return send(res, 404, { message: 'rota do mock não implementada' });
+}
+
+const gc = {
+  connected: GC_MODE === 'connected' || GC_MODE === 'reauth',
+  reauth: GC_MODE === 'reauth',
+  state: '',
+  syncs: 0,
+  links: GC_MODE === 'connected' || GC_MODE === 'reauth' ? [
+    { id: 11, role: 'push', professional_id: null, calendar_id: 'app@group.calendar.google.com', calendar_summary: 'AgendasPRO - Studio Teste', created_by_app: true, last_sync_at: nowIso(), last_full_sync_at: nowIso(), push_channel_active: false },
+    { id: 12, role: 'busy', professional_id: 1, calendar_id: 'joana@example.test', calendar_summary: 'Joana (pessoal)', created_by_app: false, last_sync_at: nowIso(), last_full_sync_at: nowIso(), push_channel_active: true },
+  ] : [],
+  nextLink: 20,
+};
+const gcCalendars = [
+  { id: 'joana@example.test', summary: 'Joana (pessoal)', primary: true, access_role: 'owner', time_zone: 'America/Sao_Paulo' },
+  { id: 'feriados@group.v.calendar.google.com', summary: 'Feriados no Brasil', primary: false, access_role: 'reader', time_zone: 'America/Sao_Paulo' },
+  { id: 'equipe@group.calendar.google.com', summary: 'Equipe', primary: false, access_role: 'writer', time_zone: 'America/Sao_Paulo' },
+];
+const gcStatus = () => ({
+  configured: true, connected: gc.connected, links: gc.connected ? gc.links : [],
+  account: gc.connected ? { email: 'joana@example.test', status: gc.reauth ? 'reauth_required' : 'active', scopes: [], connected_at: nowIso(), last_push_at: new Date(Date.now() - 35 * 60000).toISOString(), last_error_code: gc.reauth ? 'google_calendar_reauth_required' : null } : null,
+});
+
+function handleGoogle(req, res, url, body) {
+  const path = url.pathname.replace('/integrations/google-calendar', '') || '/';
+  const method = req.method;
+  if (GC_MODE === 'off') return send(res, 404, { message: 'rota do mock não implementada' });
+  if (path === '/status') {
+    if (GC_MODE === 'notconfigured') return coded(res, 503, 'google_calendar_not_configured', 'Integração indisponível.');
+    return send(res, 200, { data: gcStatus() });
+  }
+  const needAdmin = () => (isAdmin ? null : coded(res, 403, 'admin_required', 'Apenas administradores.'));
+  const needPremium = () => (premium ? null : coded(res, 402, 'plan_upgrade_required', 'O Google Agenda é do plano Premium.', { feature: 'google_calendar' }));
+  if (path === '/connect/start' && method === 'POST') {
+    if (needAdmin()) return; if (needPremium()) return;
+    gc.state = 'gcstate_' + Math.random().toString(36).slice(2);
+    const q = new URLSearchParams({ redirect_uri: String(body.redirect_uri || ''), state: gc.state });
+    return send(res, 200, { data: { authorize_url: `http://localhost:${PORT}/mock/authorize/google-calendar?${q}`, state: gc.state } });
+  }
+  if (path === '/callback' && method === 'POST') {
+    if (!gc.state || body.state !== gc.state) return coded(res, 400, 'oauth_state_invalid', 'Autorização expirada ou inválida. Tente conectar novamente.');
+    gc.state = ''; gc.connected = true; gc.reauth = false;
+    return send(res, 200, { data: gcStatus() });
+  }
+  if (path === '/disconnect' && method === 'POST') {
+    if (needAdmin()) return;
+    gc.connected = false; gc.reauth = false; gc.links = [];
+    return send(res, 200, { data: { disconnected: true, removed_calendars: body.remove_app_calendars ? 1 : 0 } });
+  }
+  if (!gc.connected) return coded(res, 404, 'google_calendar_not_connected', 'Google Agenda não conectado.');
+  if (path === '/links' && method === 'GET') return send(res, 200, { data: gc.links });
+  if (path === '/calendars') {
+    if (needAdmin()) return; if (needPremium()) return;
+    if (gc.reauth) return coded(res, 409, 'google_calendar_reauth_required', 'Reconecte o Google.');
+    return send(res, 200, { data: gcCalendars });
+  }
+  if (path === '/links' && method === 'POST') {
+    if (needAdmin()) return; if (needPremium()) return;
+    const link = { id: gc.nextLink++, role: body.role, professional_id: body.professional_id ?? null, calendar_id: body.calendar_id || 'novo-app@group.calendar.google.com',
+      calendar_summary: gcCalendars.find((c) => c.id === body.calendar_id)?.summary || 'AgendasPRO - Studio Teste', created_by_app: !!body.create_app_calendar, last_sync_at: null, last_full_sync_at: null, push_channel_active: false };
+    gc.links.push(link);
+    return send(res, 201, { data: link });
+  }
+  const m = path.match(/^\/links\/(\d+)$/);
+  if (m && method === 'DELETE') {
+    if (needAdmin()) return;
+    gc.links = gc.links.filter((l) => String(l.id) !== m[1]);
+    return send(res, 200, { data: { deleted: true } });
+  }
+  if (path === '/sync' && method === 'POST') {
+    if (needAdmin()) return; if (needPremium()) return;
+    gc.syncs += 1;
+    if (gc.syncs > 6) return coded(res, 429, 'rate_limited', 'Limite de sincronizações atingido.', { retry_at: new Date(Date.now() + 40 * 60000).toISOString() }, { 'Retry-After': '2400' });
+    return send(res, 202, { data: { queued: true } });
+  }
+  return send(res, 404, { message: 'rota do mock não implementada' });
+}
+
+const professionals = [{ id: 1, name: 'Joana', active: true }, { id: 2, name: 'Carlos', active: true }];
+const timeBlocks = () => [
+  { id: 501, professional_id: 1, starts_at: day(2) + 'T13:00:00', ends_at: day(2) + 'T14:30:00', reason: 'Ocupado (Google Agenda)', source: 'google' },
+  { id: 502, professional_id: 1, starts_at: day(4) + 'T09:00:00', ends_at: day(4) + 'T12:00:00', reason: 'Consulta médica', source: 'manual' },
+];
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -257,6 +442,28 @@ const server = http.createServer(async (req, res) => {
   const p = url.pathname;
 
   if (p.startsWith('/assistant')) return handleAssistant(req, res, url, body);
+  if (p.startsWith('/integrations/instagram')) return handleInstagram(req, res, url, body);
+  if (p.startsWith('/integrations/google-calendar')) return handleGoogle(req, res, url, body);
+  if (p === '/professionals') return send(res, 200, { data: professionals });
+  if (p === '/time-blocks' && req.method === 'GET') return send(res, 200, { data: timeBlocks() });
+  const del = p.match(/^\/time-blocks\/(\d+)$/);
+  if (del && req.method === 'DELETE') {
+    if (del[1] === '501') return coded(res, 409, 'time_block_managed_by_google', 'Este bloqueio vem do Google Agenda e não pode ser removido aqui.');
+    return send(res, 200, { data: { deleted: true } });
+  }
+  // "Login" do provedor (simulado): volta para a redirect_uri (somente localhost) com code+state, ou com error se ?deny=1.
+  const auth = p.match(/^\/mock\/authorize\/(instagram|google-calendar)$/);
+  if (auth) {
+    const redirect = url.searchParams.get('redirect_uri') || '';
+    let target;
+    try { target = new URL(redirect); } catch { target = null; }
+    if (!target || target.hostname !== 'localhost') { res.writeHead(400, { 'Content-Type': 'text/plain' }); return res.end('redirect_uri inválida (o mock só aceita localhost)'); }
+    if (url.searchParams.get('deny') === '1') { target.searchParams.set('error', 'access_denied'); target.searchParams.set('error_description', 'O usuário recusou a autorização.'); }
+    else target.searchParams.set('code', 'mock-code-' + Date.now());
+    target.searchParams.set('state', url.searchParams.get('state') || '');
+    res.writeHead(302, { Location: target.toString() });
+    return res.end();
+  }
   if (p === '/users') return send(res, 200, { returnObj: { id: 1, name: 'Usuário de Teste', email: 'teste@example.test', permission: ROLE === 'admin' ? 1 : 2, companies: [1] } });
   if (p === '/companies') return send(res, 200, { returnObj: { id: 1, name: 'Studio Teste', asaas_status: 'APPROVED', roles: [], services: [], products: [] } });
   if (p === '/companies/business_types' || p === '/utils/units_of_measurement') return send(res, 200, { returnObj: [] });
