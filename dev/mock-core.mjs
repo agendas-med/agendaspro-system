@@ -431,6 +431,142 @@ const timeBlocks = () => [
   { id: 502, professional_id: 1, starts_at: day(4) + 'T09:00:00', ends_at: day(4) + 'T12:00:00', reason: 'Consulta médica', source: 'manual' },
 ];
 
+// ---- Revisao visual (F1-F6): billing, profissionais, horarios, bloqueios e WhatsApp ----
+// MOCK_EMPTY=1 -> listas vazias; MOCK_FAIL=billing,professionals,whatsapp -> 500 nesses grupos;
+// MOCK_WA=off (404) | disabled (enabled:false) | exceeded (cota estourada, Free).
+const EMPTY = process.env.MOCK_EMPTY === '1';
+const FAIL = (process.env.MOCK_FAIL || '').split(',').filter(Boolean);
+const WA_MODE = process.env.MOCK_WA || 'on';
+const ago = (min) => new Date(Date.now() - min * 60000).toISOString().slice(0, 19);
+let pros = EMPTY ? [] : [
+  { id: 1, name: 'Joana Martins', email: 'joana@studio.test', phone: '11988887777', color: '#4a90e2', active: true, service_ids: [1, 2], google_connected: true },
+  { id: 2, name: 'Carlos Eduardo de Albuquerque Nogueira', email: 'carlos.albuquerque.nogueira@studio-exemplo.test', color: '#7cdf64', active: true, service_ids: [1] },
+  { id: 3, name: 'Paula Reis', color: '#ffcc17', active: false, service_ids: [] },
+];
+let rules = [1, 2, 3, 4, 5].map((d) => ({ weekday: d, start_time: '09:00:00', end_time: '18:00:00' }));
+let extraBlocks = [];
+let nextPro = 10;
+const waConvs = EMPTY ? [] : [
+  { id: 1, contact: { wa_id: '5511988887777', name: 'Maria Souza', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: null, handoff_at: ago(12), last_inbound_at: ago(3), last_message_at: ago(3), window_open: true, last_message: { body: 'Oi, preciso falar com alguem sobre meu horario de amanha', direction: 'in', author: 'customer' } },
+  { id: 2, contact: { wa_id: '5511977776666', name: '', opted_out: false }, mode: 'bot', state: 'idle', assigned_user_id: null, last_inbound_at: ago(90), last_message_at: ago(85), window_open: true, last_message: { body: 'Seu horario esta confirmado para amanha as 14h.', direction: 'out', author: 'bot' } },
+  { id: 3, contact: { wa_id: '5511966665555', name: 'Roberto Carlos Fernandes de Almeida Junior', opted_out: true }, mode: 'bot', state: 'idle', last_inbound_at: ago(60 * 80), last_message_at: ago(60 * 80), window_open: false, last_message: { body: 'PARAR', direction: 'in', author: 'customer' } },
+  { id: 4, contact: { wa_id: '5511955554444', name: 'Ana Paula', opted_out: false }, mode: 'human', state: 'handoff', assigned_user_id: 1, last_inbound_at: ago(60 * 30), last_message_at: ago(60 * 29), window_open: false, last_message: { body: 'Obrigada!', direction: 'in', author: 'customer' } },
+];
+const waMsgs = {
+  1: [
+    { id: 1, direction: 'in', author: 'customer', type: 'text', body: 'Oi, tudo bem?', status: 'received', created_at: ago(20) },
+    { id: 2, direction: 'out', author: 'bot', type: 'text', body: 'Ola! Sou o assistente do Studio Teste. Como posso ajudar?', status: 'read', created_at: ago(19) },
+    { id: 3, direction: 'in', author: 'customer', type: 'text', body: 'Oi, preciso falar com alguem sobre meu horario de amanha', status: 'received', created_at: ago(3) },
+    { id: 4, direction: 'out', author: 'system', type: 'text', body: 'Atendimento transferido para a equipe.', status: 'sent', created_at: ago(2) },
+  ],
+};
+let waMsgSeq = 50;
+const waTemplates = [
+  { name: 'lembrete_24h', language: 'pt_BR', category: 'UTILITY', purpose: 'reminder', body_preview: 'Ola {{1}}, lembrando do seu horario de {{2}} amanha as {{3}}.', param_count: 3, status: 'approved', synced_at: ago(100) },
+  { name: 'agendamento_confirmado', language: 'pt_BR', category: 'UTILITY', purpose: 'booking_confirmed', body_preview: 'Ola {{1}}, seu agendamento foi confirmado.', param_count: 1, status: 'approved', synced_at: ago(100) },
+  { name: 'retomar_conversa', language: 'pt_BR', category: 'MARKETING', purpose: 'agent_reopen', body_preview: 'Ola {{1}}, podemos continuar nossa conversa?', param_count: 1, status: 'pending', synced_at: ago(100) },
+];
+const waSettings = { bot_enabled: true, ai_enabled: true, welcome_text: 'Ola! Seja bem-vindo ao Studio Teste.', ai_daily_token_limit: null };
+
+function billingOverview() {
+  const premium = PLAN !== 'free';
+  const base = { plan_code: PLAN, plan_name: premium ? 'Premium' : 'Free', source: premium ? 'paid' : 'free', commission_bps: premium ? 50 : 500, paid_through: premium ? day(7) : null, features: { assistant_monthly_interactions: MONTHLY_LIMIT, assistant_actions: premium } };
+  return { subscriptions_enabled: true, entitlement: base, subscription: premium ? { status: 'active', price_cents: 4990, next_due_date: day(7) } : null, pending_invoice_url: null };
+}
+
+function handleExtra(req, res, url, body) {
+  const p = url.pathname;
+  const m = req.method;
+  const done = (fn) => { fn(); return true; };
+  const group = p.startsWith('/billing') ? 'billing' : p.startsWith('/whatsapp') ? 'whatsapp' : (p.startsWith('/professionals') || p.startsWith('/availability-rules') || p.startsWith('/time-blocks')) ? 'professionals' : '';
+  if (group && FAIL.includes(group)) return done(() => coded(res, 500, 'internal_error', 'Erro interno simulado.'));
+
+  if (p === '/billing/plans') {
+    return done(() => send(res, 200, { data: [{ code: 'free', name: 'Free', price_cents: 0, commission_bps: 500 }, { code: 'premium', name: 'Premium', price_cents: 4990, commission_bps: 50 }] }));
+  }
+  if (p === '/billing/subscription') {
+    if (m === 'POST') {
+      if (body.plan_code === 'premium') return done(() => send(res, 200, { data: { ...billingOverview(), pending_invoice_url: 'https://example.test/fatura/1', subscription: { status: 'pending', price_cents: 4990, next_due_date: day(7) } } }));
+      return done(() => send(res, 200, { data: billingOverview() }));
+    }
+    return done(() => send(res, 200, { data: billingOverview() }));
+  }
+  if (p === '/billing/invoices') {
+    return done(() => send(res, 200, { data: EMPTY ? [] : [
+      { id: 1, due_date: day(7), period_start: day(7), period_end: day(37), plan_code: 'premium', amount_cents: 4990, status: 'pending', paid_at: null, invoice_url: 'https://example.test/fatura/1' },
+      { id: 2, due_date: day(-23), period_start: day(-23), period_end: day(7), plan_code: 'premium', amount_cents: 4990, status: 'paid', paid_at: day(-22), invoice_url: 'https://example.test/fatura/2' },
+      { id: 3, due_date: day(-53), period_start: day(-53), period_end: day(-23), plan_code: 'premium', amount_cents: 4990, status: 'overdue', paid_at: null, invoice_url: '' },
+    ] }));
+  }
+  if (p === '/billing/commissions') {
+    const items = EMPTY ? [] : [
+      { id: 1, created_at: day(-1), sale_id: 1203, plan_code: 'premium', gross_cents: 12000, commission_bps: 50, commission_cents: 60, status: 'settled', settled_at: day(0) },
+      { id: 2, created_at: day(-2), sale_id: 1198, plan_code: 'free', gross_cents: 8500, commission_bps: 500, commission_cents: 425, status: 'pending', settled_at: null },
+      { id: 3, created_at: day(-4), sale_id: 1180, plan_code: 'premium', gross_cents: 20000, commission_bps: 50, commission_cents: 100, status: 'refunded', settled_at: null },
+    ];
+    return done(() => send(res, 200, { data: { items, totals_settled: EMPTY ? { gross_cents: 0, commission_cents: 0, net_cents: 0 } : { gross_cents: 12000, commission_cents: 60, net_cents: 11940 } } }));
+  }
+
+  if (p === '/professionals' && m === 'GET') return done(() => send(res, 200, { data: url.searchParams.get('include_inactive') ? pros : pros.filter((x) => x.active) }));
+  if (p === '/professionals' && m === 'POST') {
+    const pro = { id: nextPro++, active: true, color: '#4a90e2', service_ids: [], ...body };
+    pros.push(pro);
+    return done(() => send(res, 201, { data: pro }));
+  }
+  const pr = p.match(/^\/professionals\/(\d+)$/);
+  if (pr) {
+    const pro = pros.find((x) => x.id === Number(pr[1]));
+    if (!pro) return done(() => coded(res, 404, 'professional_not_found', 'Profissional nao encontrado.'));
+    if (m === 'PATCH') Object.assign(pro, body);
+    if (m === 'DELETE') pro.active = false;
+    return done(() => send(res, 200, { data: pro }));
+  }
+  if (p === '/availability-rules' && m === 'GET') return done(() => send(res, 200, { data: rules }));
+  if (p.startsWith('/availability-rules/professional/') && m === 'PUT') {
+    rules = (body.rules || []).map((r) => ({ ...r, start_time: r.start_time + ':00', end_time: r.end_time + ':00' }));
+    return done(() => send(res, 200, { data: rules }));
+  }
+  if (p === '/time-blocks' && m === 'POST') {
+    const b = { id: 600 + extraBlocks.length, source: 'manual', professional_id: body.professional_id ?? null, starts_at: String(body.starts_at || '').replace(' ', 'T'), ends_at: String(body.ends_at || '').replace(' ', 'T'), reason: body.reason || '' };
+    extraBlocks.push(b);
+    return done(() => send(res, 201, { data: b }));
+  }
+  if (p === '/time-blocks' && m === 'GET') return done(() => send(res, 200, { data: EMPTY ? [] : [...timeBlocks(), ...extraBlocks] }));
+
+  if (p.startsWith('/whatsapp')) {
+    if (WA_MODE === 'off') return done(() => coded(res, 404, 'not_found', 'Recurso indisponivel.'));
+    const statusBody = () => ({ enabled: WA_MODE !== 'disabled', display_phone: '+55 11 4000-1234', wa_link: 'https://wa.me/551140001234?text=Ola', booking_ready: true, settings: waSettings, ai_tokens_today: 4200 });
+    if (p === '/whatsapp/status') return done(() => send(res, 200, { data: statusBody() }));
+    if (p === '/whatsapp/config' && m === 'PUT') {
+      if (ROLE !== 'admin') return done(() => coded(res, 403, 'admin_required', 'Apenas administradores.'));
+      Object.assign(waSettings, body);
+      return done(() => send(res, 200, { data: statusBody() }));
+    }
+    if (p === '/whatsapp/usage') {
+      const exceeded = WA_MODE === 'exceeded';
+      return done(() => send(res, 200, { data: { period: url.searchParams.get('period') || new Date().toISOString().slice(0, 7), plan: PLAN, messages: { used: exceeded ? 50 : PLAN === 'free' ? 41 : 312, limit: PLAN === 'free' ? 50 : null }, breakdown: { inbound: 140, bot_replies: 98, billable: 41, delivered: 38, read: 30, failed: 2 }, ai: { tokens: 18200, calls: 64, daily_limit: 50000 } } }));
+    }
+    if (p === '/whatsapp/templates') return done(() => send(res, 200, { data: EMPTY ? [] : waTemplates }));
+    if (p === '/whatsapp/conversations' && m === 'GET') return done(() => send(res, 200, { data: waConvs }));
+    const wc = p.match(/^\/whatsapp\/conversations\/(\d+)(?:\/(messages|assume|release))?$/);
+    if (wc) {
+      const conv = waConvs.find((c) => c.id === Number(wc[1]));
+      if (!conv) return done(() => coded(res, 404, 'conversation_not_found', 'Conversa nao encontrada.'));
+      if (!wc[2]) return done(() => send(res, 200, { data: conv }));
+      if (wc[2] === 'assume') { conv.mode = 'human'; conv.assigned_user_id = 1; return done(() => send(res, 200, { data: conv })); }
+      if (wc[2] === 'release') { conv.mode = 'bot'; conv.assigned_user_id = null; return done(() => send(res, 200, { data: conv })); }
+      if (m === 'POST') {
+        if (!conv.window_open && !body.template) return done(() => coded(res, 409, 'window_closed', 'A janela de 24 horas esta fechada. Envie um modelo.'));
+        const msg = { id: waMsgSeq++, direction: 'out', author: 'agent', type: body.template ? 'template' : 'text', body: body.text || 'Modelo enviado', template_name: body.template || '', status: 'sent', created_at: ago(0) };
+        (waMsgs[conv.id] = waMsgs[conv.id] || []).push(msg);
+        return done(() => send(res, 201, { data: msg }));
+      }
+      return done(() => send(res, 200, { data: waMsgs[conv.id] || [{ id: 1, direction: 'in', author: 'customer', type: 'text', body: conv.last_message ? conv.last_message.body : '', status: 'received', created_at: ago(30) }] }));
+    }
+  }
+  return false;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -441,6 +577,7 @@ const server = http.createServer(async (req, res) => {
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await readBody(req);
   const p = url.pathname;
 
+  if (handleExtra(req, res, url, body)) return;
   if (p.startsWith('/assistant')) return handleAssistant(req, res, url, body);
   if (p.startsWith('/integrations/instagram')) return handleInstagram(req, res, url, body);
   if (p.startsWith('/integrations/google-calendar')) return handleGoogle(req, res, url, body);
@@ -465,7 +602,7 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   if (p === '/users') return send(res, 200, { returnObj: { id: 1, name: 'Usuário de Teste', email: 'teste@example.test', permission: ROLE === 'admin' ? 1 : 2, companies: [1] } });
-  if (p === '/companies') return send(res, 200, { returnObj: { id: 1, name: 'Studio Teste', asaas_status: 'APPROVED', roles: [], services: [], products: [] } });
+  if (p === '/companies') return send(res, 200, { returnObj: { id: 1, name: 'Studio Teste', asaas_status: 'APPROVED', roles: [], services: [{ id: 1, name: 'Corte' }, { id: 2, name: 'Escova' }], products: [] } });
   if (p === '/companies/business_types' || p === '/utils/units_of_measurement') return send(res, 200, { returnObj: [] });
   if (p === '/billing/subscription') {
     return send(res, 200, { data: { entitlement: { plan_code: PLAN, plan_name: PLAN === 'free' ? 'Free' : 'Premium', features: { assistant_monthly_interactions: MONTHLY_LIMIT, assistant_actions: PLAN !== 'free' } } } });
