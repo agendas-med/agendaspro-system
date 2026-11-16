@@ -228,4 +228,14 @@ export default {
     width: auto;
     max-width: none;
 }
+@media (max-width: 640px) {
+    .action-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+
+    .action-buttons .btn {
+        flex: 1 1 140px;
+    }
+}
 </style>

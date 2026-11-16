@@ -1,6 +1,6 @@
 <template>
     <section class="kb" :aria-busy="loading ? 'true' : 'false'">
-        <div class="kb-lgpd" role="note">
+        <div class="ui-notice kb-lgpd" role="note">
             <p class="fontsize-md"><font-awesome icon="shield-halved" aria-hidden="true" /> <strong>Privacidade (LGPD)</strong></p>
             <p class="fontsize-sm">
                 Os textos desta base são enviados ao provedor de IA do AgendasPro para gerar respostas. Não cadastre dados pessoais de clientes
@@ -281,13 +281,9 @@ export default {
 }
 
 .kb-lgpd {
-    display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-2);
-    padding: var(--space-5);
-    border: 1px solid var(--amarelo);
-    border-radius: var(--radius-md);
-    background: var(--amarelo-claro);
 }
 
 .kb-head {
@@ -372,5 +368,13 @@ export default {
 
 .vermelho {
     color: var(--vermelho);
+}
+
+@media (max-width: 640px) {
+    .kb-add,
+    .kb-form-buttons .btn,
+    .kb-item-buttons .btn {
+        flex: 1 1 120px;
+    }
 }
 </style>

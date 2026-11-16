@@ -7,7 +7,7 @@
         <UtilsLoading :loading="loading" />
 
         <p class="conv-state fontsize-md cinza" v-if="!loading && !items.length" role="status">
-            Nenhuma conversa ainda. Escreva sua primeira pergunta ao lado.
+            Nenhuma conversa ainda. Escreva sua primeira pergunta para começar.
         </p>
 
         <ul class="conv-items" v-if="items.length" aria-label="Conversas com o assistente">
@@ -91,7 +91,8 @@ export default {
 
 .conv-delete {
     flex: none;
-    width: 40px;
+    width: 44px;
+    min-height: 44px;
     border: 1px solid var(--cinza-medio);
     border-radius: var(--radius-md);
     background: var(--branco);
@@ -146,5 +147,10 @@ export default {
 
 .conv-time {
     flex: none;
+}
+@media (max-width: 900px) {
+    .conv-items {
+        max-height: 220px;
+    }
 }
 </style>

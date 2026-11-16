@@ -1,7 +1,7 @@
 <template>
     <section class="chat" aria-label="Conversa com o assistente">
         <header class="chat-header">
-            <h2 class="fontsize-lg chat-title">{{ title }}</h2>
+            <h2 class="fontsize-md-bold chat-title">{{ title }}</h2>
             <AssistantUsageMeter class="chat-usage" :usage="state.usage" :plan="state.plan" />
         </header>
 
@@ -56,7 +56,7 @@
         </div>
 
         <div class="chat-footer">
-            <div class="chat-notice" :class="notice.kind" role="alert" v-if="notice">
+            <div class="ui-notice" :class="noticeClass" role="alert" v-if="notice">
                 <p v-if="notice.tag === 'rate_limited'">
                     <template v-if="cooldownSeconds > 0">Muitas mensagens em pouco tempo. Aguarde para enviar de novo<span aria-hidden="true"> em <strong>{{ cooldownSeconds }} s</strong></span>.</template>
                     <template v-else>Você já pode enviar de novo.</template>
@@ -74,7 +74,7 @@
             <form class="composer" novalidate v-on:submit.prevent="submit()">
                 <label for="assistant-composer" class="sr-only">Escreva sua mensagem para o assistente</label>
                 <textarea id="assistant-composer" ref="composer" v-model="state.draft" rows="2" :maxlength="maxLength"
-                    placeholder="Pergunte algo ao assistente... (Enter envia, Shift+Enter quebra a linha)"
+                    placeholder="Pergunte algo ao assistente..." title="Enter envia, Shift+Enter quebra a linha"
                     :disabled="state.sending || state.recovering" v-on:keydown.enter.exact="onEnter($event)"></textarea>
                 <button type="submit" class="btn btn-primary composer-send" :class="{ 'btn-loading': state.sending }"
                     :disabled="!canSend" aria-label="Enviar mensagem">
@@ -83,7 +83,7 @@
             </form>
             <p class="fontsize-sm cinza composer-hint">
                 <span v-if="formError" class="vermelho" role="alert">{{ formError }}</span>
-                <span v-else>{{ state.draft.length }}/{{ maxLength }} caracteres. Respostas de IA podem conter erros: confira antes de agir.</span>
+                <span v-else>{{ state.draft.length }}/{{ maxLength }} caracteres. Enter envia, Shift+Enter quebra a linha. Respostas de IA podem conter erros: confira antes de agir.</span>
             </p>
         </div>
     </section>
@@ -103,6 +103,10 @@ export default {
         state() { return this.$assistant.state; },
         notice() { return this.state.notice; },
         isAdmin() { return this.$myFunctions.hasPermission(this); },
+        noticeClass() {
+            const kind = this.notice && this.notice.kind;
+            return kind === 'error' ? 'danger' : kind === 'info' ? 'info' : '';
+        },
         title() {
             const active = this.state.conversations.find((c) => c.id === this.state.activeId);
             return active ? conversationLabel(active) : "Nova conversa";
@@ -288,37 +292,11 @@ export default {
     border-top: 1px solid var(--cinza-medio);
 }
 
-.chat-notice {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding: var(--space-4) var(--space-5);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--amarelo);
-    background: var(--amarelo-claro);
-}
-
-.chat-notice.error {
-    border-color: var(--vermelho);
-}
-
-.chat-notice.info {
-    border-color: var(--azul);
-    background: var(--azul-claro);
-}
-
 .chat-notice-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
-}
-
-.chat-notice .btn {
-    width: auto;
-    max-width: none;
 }
 
 .composer {
@@ -351,6 +329,17 @@ export default {
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .composer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .composer-send {
+        width: 100%;
+    }
 }
 
 @media (max-width: 900px) {
