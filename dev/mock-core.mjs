@@ -9,6 +9,10 @@
 //   MOCK_PLAN=free   free (somente consulta, cota 30) | premium (cota 1000)
 //   MOCK_DISABLED=1  assistente desligado (status enabled:false; demais rotas 503 assistant_disabled)
 //   MOCK_KB_LIMIT=3  limite de textos da base (409 knowledge_limit_reached ao passar; padrão 500)
+//   MOCK_EMPTY=1     listas vazias (profissionais, conversas do WhatsApp, modelos) para revisar estados vazios
+//   MOCK_FAIL=billing,professionals,whatsapp  grupos de rotas respondendo 500 ("Erro interno simulado.")
+//   MOCK_WA=off|disabled|exceeded  estado do WhatsApp (desconectado, desativado, cota excedida)
+//   Também atende GET /appointments (agenda por profissional).
 //
 // Palavras-chave para disparar cenários no chat:
 //   "agendar"  -> resposta com ação proposta (confirm_token)      "limite"  -> 402 cota esgotada

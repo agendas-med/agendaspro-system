@@ -13,7 +13,7 @@
             <button type="button" class="btn btn-primary" v-on:click="load()">Tentar novamente</button>
         </div>
 
-        <p class="fontsize-md cinza" v-if="!loading && !loadError && !templates.length" role="status">
+        <p class="fontsize-sm cinza" v-if="!loading && !loadError && !templates.length" role="status">
             Nenhum modelo cadastrado ainda.
         </p>
 
