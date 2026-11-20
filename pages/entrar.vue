@@ -27,12 +27,24 @@
         <span class="fontsize-sm preto">ou</span>
       </div>
       <GoogleAuth text="Entrar com o Google" @response="handleGoogleResponse($event)"></GoogleAuth>
+      <p v-if="$config.public.googleClientId" class="fontsize-sm cinza mt-3">Ao continuar com Google, você concorda com os <a :href="termsUrl" target="_blank" rel="noopener noreferrer" class="underline">Termos de Uso</a> e a <a :href="privacyUrl" target="_blank" rel="noopener noreferrer" class="underline">Política de Privacidade</a>.</p>
     </div>
   </template>
   
   <script>
 
   export default {
+    computed: {
+      siteBase() {
+        return String(this.$config.public.siteUrl || "").replace(/\/+$/, "");
+      },
+      termsUrl() {
+        return this.siteBase + "/termos";
+      },
+      privacyUrl() {
+        return this.siteBase + "/privacidade";
+      }
+    },
     data() {
       return {
         email: "",
